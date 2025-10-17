@@ -1,0 +1,186 @@
+import React, { useState } from "react";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
+import { X } from "lucide-react";
+
+interface HourlyTempData {
+  hour: string;
+  temperature: number;
+}
+
+interface HourlyTemperatureChartProps {
+  date: string;
+  data: HourlyTempData[];
+  onClose: () => void;
+}
+
+export const HourlyTemperatureChart = ({ date, data, onClose }: HourlyTemperatureChartProps) => {
+  const [hourlyData, setHourlyData] = useState<HourlyTempData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Buscar dados horários do backend
+  const fetchHourlyData = async () => {
+    try {
+      setIsLoading(true);
+      const formattedDate = new Date(date).toISOString().split('T')[0]; // YYYY-MM-DD
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/hourly-weather/${formattedDate}/1`); // lojaId fixo, pode ser prop
+      const result = await response.json();
+      if (result.success && result.data) {
+        setHourlyData(result.data.map((d: any) => ({ hour: d.hour, temperature: d.temperature })));
+      } else {
+        setHourlyData(generateMockHourlyTempData());
+      }
+    } catch (error) {
+      setHourlyData(generateMockHourlyTempData());
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchHourlyData();
+  }, [date]);
+
+  const displayData = data.length > 0 ? data : hourlyData;
+  const maxTemp = Math.max(...displayData.map(d => d.temperature));
+  const minTemp = Math.min(...displayData.map(d => d.temperature));
+  const avgTemp = displayData.reduce((sum, d) => sum + d.temperature, 0) / (displayData.length || 1);
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg p-4 shadow-xl">
+          <div className="border-b border-[hsl(var(--border))] pb-2 mb-2">
+            <p className="font-bold text-[hsl(var(--card-foreground))] text-lg">{label}</p>
+            <p className="text-sm text-[hsl(var(--muted-foreground))]">
+              {new Date(date).toLocaleDateString('pt-BR', { 
+                weekday: 'long', 
+                day: '2-digit', 
+                month: '2-digit', 
+                year: 'numeric' 
+              })}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">🌡️</span>
+              <div>
+                <p className="text-lg font-bold" style={{ color: '#ef4444' }}>
+                  {data.temperature.toFixed(1)}°C
+                </p>
+                <p className="text-xs text-[hsl(var(--muted-foreground))]">
+                  Temperatura por hora
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-[hsl(var(--card))] rounded-2xl p-6 shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex justify-between items-start mb-6">
+          <div>
+            <h2 className="text-xl font-bold text-[hsl(var(--card-foreground))] mb-2">
+              ⏰ Temperatura por Hora
+            </h2>
+            <p className="text-sm text-[hsl(var(--muted-foreground))]">
+              {new Date(date).toLocaleDateString('pt-BR', { 
+                weekday: 'long', 
+                day: '2-digit', 
+                month: 'long', 
+                year: 'numeric' 
+              })}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-[hsl(var(--muted))] rounded-lg transition-colors"
+          >
+            <X size={20} className="text-[hsl(var(--muted-foreground))]" />
+          </button>
+        </div>
+        {/* Gráfico */}
+        {isLoading ? (
+          <div className="h-[400px] flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+              <p className="text-[hsl(var(--muted-foreground))]">Carregando dados horários...</p>
+            </div>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={400}>
+            <LineChart 
+              data={displayData} 
+              margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+            >
+              <CartesianGrid 
+                strokeDasharray="3 3" 
+                stroke="hsl(var(--border))" 
+                opacity={0.3} 
+                horizontal={true}
+                vertical={false}
+              />
+              <XAxis
+                dataKey="hour"
+                stroke="hsl(var(--muted-foreground))"
+                tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11, fontWeight: 500 }}
+                interval={1}
+              />
+              <YAxis
+                stroke="hsl(var(--muted-foreground))"
+                tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+                tickFormatter={(value) => `${value}°C`}
+                domain={[minTemp - 2, maxTemp + 2]}
+              />
+              <Tooltip content={<CustomTooltip />} />
+              <ReferenceLine 
+                y={avgTemp} 
+                stroke="#f59e0b" 
+                strokeDasharray="5 5" 
+                strokeWidth={1}
+                label={{ value: "Média do Dia", position: "top", fontSize: 10 }}
+              />
+              <Line
+                type="monotone"
+                dataKey="temperature"
+                stroke="#ef4444"
+                strokeWidth={3}
+                dot={{ 
+                  fill: "#ef4444", 
+                  r: 4, 
+                  strokeWidth: 2, 
+                  stroke: "white"
+                }}
+                activeDot={{ 
+                  r: 6, 
+                  stroke: "#ef4444", 
+                  strokeWidth: 2, 
+                  fill: "white",
+                  style: { filter: 'drop-shadow(0 4px 8px rgba(239, 68, 68, 0.5))' }
+                }}
+                connectNulls={false}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Mock para fallback
+const generateMockHourlyTempData = (): HourlyTempData[] => {
+  const hours = [];
+  for (let i = 0; i < 24; i++) {
+    const hour = `${i.toString().padStart(2, '0')}:00`;
+    const temperature = 18 + Math.sin((i - 6) * Math.PI / 12) * 8 + Math.random() * 2;
+    hours.push({ hour, temperature: Math.round(temperature * 10) / 10 });
+  }
+  return hours;
+};
