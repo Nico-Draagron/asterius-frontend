@@ -74,7 +74,15 @@ const ClassificationModal = ({ classification, onClose, temperature, precipitati
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-50 rounded-2xl shadow-md max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 md:p-8">
+      <div className="bg-slate-50 rounded-2xl shadow-md max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 md:p-8 relative">
+        {/* Botão X para fechar */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-200 transition"
+          aria-label="Fechar"
+        >
+          <X size={22} className="text-gray-500" />
+        </button>
         {/* Header: Contexto e Classificação */}
         <div className="flex flex-col gap-2 mb-4">
           <div className="flex justify-between items-center">
