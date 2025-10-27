@@ -184,17 +184,16 @@ const Home = () => {
   
   // Calculate KPIs from today's data (data atual)
   const todaysSales = apiData?.predictions.length > todayIndex ? apiData.predictions[todayIndex].value : 0;
-  // Calcular a temperatura máxima do dia considerando apenas 'temperature' (média horária)
+  // Buscar a maior temperatura máxima entre todos os registros do dia de hoje
   let todaysTemp = 22;
   if (apiData?.weather_data && apiData.weather_data.length > 0) {
     const todayDate = apiData.weather_data[todayIndex]?.date;
-    // Filtra todos os registros do dia e pega a maior temperatura disponível
-    // Preferência: temp_max > temperature > temp_media
-    const todayTemps = apiData.weather_data
+    // Filtra todos os registros do dia de hoje
+    const todayMaxTemps = apiData.weather_data
       .filter(w => w.date === todayDate)
-      .map(w => (w.temp_max ?? w.temperature ?? w.temp_media ?? -Infinity));
-    if (todayTemps.length > 0) {
-      todaysTemp = Math.round(Math.max(...todayTemps));
+      .map(w => w.temp_max ?? w.temperature ?? w.temp_media ?? -Infinity);
+    if (todayMaxTemps.length > 0) {
+      todaysTemp = Math.round(Math.max(...todayMaxTemps));
     }
   }
   const todaysRain = apiData?.weather_data.length > todayIndex 

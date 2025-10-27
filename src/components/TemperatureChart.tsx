@@ -92,8 +92,6 @@ export const TemperatureChart = ({ data }: TemperatureChartProps) => {
               </div>
             </div>
             <div className="text-xs text-[hsl(var(--muted-foreground))] space-y-1">
-              <p>📊 Diferença da média: {(temp - avgTemp).toFixed(1)}°C</p>
-              <p>🔥 Máxima do período: {maxTemp.toFixed(1)}°C</p>
               <p>❄️ Mínima do período: {minTemp.toFixed(1)}°C</p>
               <p>📏 Amplitude térmica: {tempVariation.toFixed(1)}°C</p>
             </div>
@@ -113,7 +111,7 @@ export const TemperatureChart = ({ data }: TemperatureChartProps) => {
         const response = await fetch(`${import.meta.env.VITE_API_URL}/hourly-weather/${data.fullDate}/1`); // lojaId fixo, pode ser prop
         const result = await response.json();
         if (result.success && result.data) {
-          setHourlyData(result.data.map((d: any) => ({ hour: d.hour, temperature: d.temperature })));
+          setHourlyData(result.data.map((d: any) => ({ hour: d.hour, temp_max: d.temp_max, temp_min: d.temp_min })));
         } else {
           setHourlyData([]);
         }
@@ -130,23 +128,22 @@ export const TemperatureChart = ({ data }: TemperatureChartProps) => {
       <div className="flex justify-between items-start mb-6">
         <div>
           <h2 className="text-xl font-bold text-[hsl(var(--card-foreground))] mb-2">
-            🌡️ Previsão de Temperatura  Max- 7 Dias
+            🌡️ Previsão de Temperatura Max- 7 Dias
           </h2>
           <p className="text-sm text-[hsl(var(--muted-foreground))]">
             Acompanhe as variações térmicas previstas
           </p>
         </div>
-        
-        {/* Informações do clima */}
+        {/* Informações do clima customizadas */}
         <div className="text-right space-y-1">
           <div className="flex items-center gap-2 justify-end">
-            <span className="text-2xl">{weatherInfo.icon}</span>
-            <div>
-              <div className="text-lg font-bold" style={{ color: weatherInfo.color }}>
-                {avgTemp.toFixed(1)}°C
+            <div className="flex flex-col items-end">
+              <span className="text-4xl mb-1" style={{ color: weatherInfo.color }}>{weatherInfo.icon}</span>
+              <div className="text-3xl font-bold mb-1" style={{ color: weatherInfo.color }}>
+                {maxTemp.toFixed(1)}°C
               </div>
-              <div className="text-xs text-[hsl(var(--muted-foreground))]">
-                Média do Período
+              <div className="text-sm text-[hsl(var(--muted-foreground))]">
+                {weatherInfo.type}
               </div>
             </div>
           </div>

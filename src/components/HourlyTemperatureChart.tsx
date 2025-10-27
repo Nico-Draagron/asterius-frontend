@@ -5,6 +5,8 @@ import { X } from "lucide-react";
 interface HourlyTempData {
   hour: string;
   temperature: number;
+  temp_max?: number;
+  temp_min?: number;
 }
 
 interface HourlyTemperatureChartProps {
@@ -25,7 +27,12 @@ export const HourlyTemperatureChart = ({ date, data, onClose }: HourlyTemperatur
       const response = await fetch(`${import.meta.env.VITE_API_URL}/hourly-weather/${formattedDate}/1`); // lojaId fixo, pode ser prop
       const result = await response.json();
       if (result.success && result.data) {
-        setHourlyData(result.data.map((d: any) => ({ hour: d.hour, temperature: d.temperature })));
+        setHourlyData(result.data.map((d: any) => ({
+          hour: d.hour,
+          temperature: d.temperature,
+          temp_max: d.temp_max,
+          temp_min: d.temp_min
+        })));
       } else {
         setHourlyData(generateMockHourlyTempData());
       }
@@ -40,10 +47,22 @@ export const HourlyTemperatureChart = ({ date, data, onClose }: HourlyTemperatur
     fetchHourlyData();
   }, [date]);
 
-  const displayData = data.length > 0 ? data : hourlyData;
-  const maxTemp = Math.max(...displayData.map(d => d.temperature));
-  const minTemp = Math.min(...displayData.map(d => d.temperature));
-  const avgTemp = displayData.reduce((sum, d) => sum + d.temperature, 0) / (displayData.length || 1);
+  // Normalizar o campo hour para garantir que seja número inteiro (0-23)
+  const normalizeHour = (h: any) => {
+    if (typeof h === 'number') return h;
+    if (typeof h === 'string') {
+      const n = parseInt(h);
+      return isNaN(n) ? h : n;
+    }
+    return h;
+  };
+  const displayData = hourlyData.map(d => ({
+    ...d,
+    hour: normalizeHour(d.hour)
+  }));
+  const maxTemp = Math.max(...displayData.map(d => d.temp_max));
+  const minTemp = Math.min(...displayData.map(d => d.temp_min));
+  const avgTemp = displayData.reduce((sum, d) => sum + d.temp_max, 0) / (displayData.length || 1);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -130,7 +149,11 @@ export const HourlyTemperatureChart = ({ date, data, onClose }: HourlyTemperatur
                 dataKey="hour"
                 stroke="hsl(var(--muted-foreground))"
                 tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11, fontWeight: 500 }}
-                interval={1}
+                interval={0}
+                type="number"
+                domain={[0, 23]}
+                allowDecimals={false}
+                tickFormatter={(value) => `${value}h`}
               />
               <YAxis
                 stroke="hsl(var(--muted-foreground))"
@@ -146,9 +169,11 @@ export const HourlyTemperatureChart = ({ date, data, onClose }: HourlyTemperatur
                 strokeWidth={1}
                 label={{ value: "Média do Dia", position: "top", fontSize: 10 }}
               />
+              {/* Linha de temperatura máxima (vermelha) */}
               <Line
                 type="monotone"
-                dataKey="temperature"
+                dataKey="temp_max"
+                name="Temperatura Máxima do Horário"
                 stroke="#ef4444"
                 strokeWidth={3}
                 dot={{ 
@@ -164,6 +189,46 @@ export const HourlyTemperatureChart = ({ date, data, onClose }: HourlyTemperatur
                   fill: "white",
                   style: { filter: 'drop-shadow(0 4px 8px rgba(239, 68, 68, 0.5))' }
                 }}
+                connectNulls={false}
+              />
+              {/* Linha de temperatura mínima (azul) */}
+              <Line
+                type="monotone"
+                dataKey="temp_min"
+                name="Temperatura Mínima do Horário"
+                stroke="#3b82f6"
+                strokeWidth={2}
+                dot={false}
+                connectNulls={false}
+              />
+              {/* Linha de temperatura mínima */}
+              <Line
+                type="monotone"
+                dataKey="temp_min"
+                name="Temperatura Mínima"
+                stroke="#3b82f6"
+                strokeWidth={2}
+                dot={false}
+                connectNulls={false}
+              />
+              {/* Linha de temperatura máxima */}
+              <Line
+                type="monotone"
+                dataKey="temp_max"
+                name="Temperatura Máxima"
+                stroke="#f59e0b"
+                strokeWidth={2}
+                dot={false}
+                connectNulls={false}
+              />
+              {/* Linha de temperatura mínima */}
+              <Line
+                type="monotone"
+                dataKey="temp_min"
+                name="Temperatura Mínima"
+                stroke="#3b82f6"
+                strokeWidth={2}
+                dot={false}
                 connectNulls={false}
               />
             </LineChart>
