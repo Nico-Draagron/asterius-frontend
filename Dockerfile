@@ -22,6 +22,10 @@ COPY src/ ./src/
 COPY public/ ./public/
 COPY index.html ./
 
+# Definir variáveis de ambiente para produção
+ENV VITE_API_URL=https://asterius-backend-476102.southamerica-east1.run.app
+ENV VITE_NODE_ENV=production
+
 # Build da aplicação
 RUN npm run build
 
