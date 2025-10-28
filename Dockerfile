@@ -2,15 +2,25 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 
-# Copiar package files
+# Copiar package files primeiro
 COPY package.json ./
+COPY package-lock.json* ./
 COPY bun.lockb* ./
 
-# Instalar dependências (priorizar npm por compatibilidade)
+# Instalar dependências
 RUN npm install --legacy-peer-deps
 
+# Copiar configuração do projeto
+COPY tsconfig*.json ./
+COPY vite.config.ts ./
+COPY tailwind.config.ts ./
+COPY postcss.config.js ./
+COPY components.json ./
+
 # Copiar código fonte
-COPY . .
+COPY src/ ./src/
+COPY public/ ./public/
+COPY index.html ./
 
 # Build da aplicação
 RUN npm run build
