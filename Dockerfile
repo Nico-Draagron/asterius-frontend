@@ -27,28 +27,102 @@ RUN npm run build
 
 # Stage de produção com nginx
 FROM nginx:alpine
+
+# Copiar arquivos buildados
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Criar configuração nginx para Cloud Run (porta 8080)
-RUN echo 'server {\n\
-    listen 8080;\n\
-    server_name localhost;\n\
-    root /usr/share/nginx/html;\n\
-    index index.html;\n\
-    \n\
-    location / {\n\
-        try_files $uri $uri/ /index.html;\n\
-    }\n\
-    \n\
-    location /health {\n\
-        return 200 "healthy";\n\
-        add_header Content-Type text/plain;\n\
-    }\n\
-    \n\
-    # Gzip compression\n\
-    gzip on;\n\
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml;\n\
-}' > /etc/nginx/conf.d/default.conf
+# Criar arquivo de configuração nginx
+COPY <<EOF /etc/nginx/conf.d/default.conf
+server {
+    listen 8080;
+    listen [::]:8080;
+    server_name localhost;
+    root /usr/share/nginx/html;
+    index index.html;
+    
+    # Para SPAs - todas as rotas vão para index.html
+    location / {
+        try_files \$uri \$uri/ /index.html;
+    }
+    
+    # Health check endpoint
+    location /health {
+        access_log off;
+        return 200 "healthy\n";
+        add_header Content-Type text/plain;
+    }
+    
+    # Cache static assets
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files \$uri =404;
+    }
+}
+EOF
+
+# Configurar nginx.conf principal para Cloud Run
+COPY <<EOF /etc/nginx/nginx.conf
+user nginx;
+worker_processes auto;
+error_log /var/log/nginx/error.log warn;
+pid /var/run/nginx.pid;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+    
+    sendfile on;
+    keepalive_timeout 65;
+    
+    # Gzip compression
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 10240;
+    gzip_proxied expired no-cache no-store private must-revalidate no_last_modified no_etag auth;
+    gzip_types
+        text/css
+        text/javascript
+        text/xml
+        text/plain
+        text/x-component
+        application/javascript
+        application/x-javascript
+        application/json
+        application/xml
+        application/rss+xml
+        application/atom+xml
+        font/truetype
+        font/opentype
+        application/vnd.ms-fontobject
+        image/svg+xml;
+    
+    include /etc/nginx/conf.d/*.conf;
+}
+EOF
 
 EXPOSE 8080
-CMD ["nginx", "-g", "daemon off;"]
+
+# Usar um script de entrada personalizado
+COPY <<EOF /docker-entrypoint.sh
+#!/bin/sh
+set -e
+
+echo "Starting nginx on port 8080..."
+echo "Nginx config:"
+cat /etc/nginx/conf.d/default.conf
+
+# Testar configuração
+nginx -t
+
+# Iniciar nginx
+exec nginx -g "daemon off;"
+EOF
+
+RUN chmod +x /docker-entrypoint.sh
+
+CMD ["/docker-entrypoint.sh"]
