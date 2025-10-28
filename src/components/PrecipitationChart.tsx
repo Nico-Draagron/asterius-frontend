@@ -99,7 +99,7 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
               <span className="text-2xl">{rainInfo.icon}</span>
               <div>
                 <p className="text-lg font-bold" style={{ color: rainInfo.color }}>
-                  {data.rainDaily.toFixed(1)}mm
+                  {(data.rainDaily || 0).toFixed(1)}mm
                 </p>
                 <p className="text-xs text-[hsl(var(--muted-foreground))]">
                   {rainInfo.type}
@@ -107,11 +107,11 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
               </div>
             </div>
             <div className="text-xs text-[hsl(var(--muted-foreground))] space-y-1">
-              <p>💧 Acumulado até aqui: {data.rainAccumulated.toFixed(1)}mm</p>
-              <p>📊 Média do período: {avgRain.toFixed(1)}mm/dia</p>
-              <p>⛈️ Pico máximo: {maxRain.toFixed(1)}mm</p>
+              <p>💧 Acumulado até aqui: {(data.rainAccumulated || 0).toFixed(1)}mm</p>
+              <p>📊 Média do período: {(avgRain || 0).toFixed(1)}mm/dia</p>
+              <p>⛈️ Pico máximo: {(maxRain || 0).toFixed(1)}mm</p>
               <p>🌧️ Dias chuvosos: {rainyDays} de 7</p>
-              <p>💦 Total previsto: {totalRain.toFixed(1)}mm</p>
+              <p>💦 Total previsto: {(totalRain || 0).toFixed(1)}mm</p>
               <div className="mt-2 pt-1 border-t border-[hsl(var(--border))]">
                 <p className="text-blue-600 font-semibold">👆 Clique para ver detalhes por hora</p>
               </div>
@@ -141,7 +141,7 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
             <span className="text-2xl">{getWeatherIcon(totalRain)}</span>
             <div>
               <div className="text-lg font-bold text-blue-600">
-                {totalRain.toFixed(1)}mm
+                {(totalRain || 0).toFixed(1)}mm
               </div>
               <div className="text-xs text-[hsl(var(--muted-foreground))]">
                 Total Previsto

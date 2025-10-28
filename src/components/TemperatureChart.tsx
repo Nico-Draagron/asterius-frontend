@@ -84,7 +84,7 @@ export const TemperatureChart = ({ data }: TemperatureChartProps) => {
               <span className="text-2xl">{tempInfo.icon}</span>
               <div>
                 <p className="text-lg font-bold" style={{ color: tempInfo.color }}>
-                  {temp.toFixed(1)}°C
+                  {(temp || 0).toFixed(1)}°C
                 </p>
                 <p className="text-xs text-[hsl(var(--muted-foreground))]">
                   {tempInfo.type}
@@ -92,8 +92,8 @@ export const TemperatureChart = ({ data }: TemperatureChartProps) => {
               </div>
             </div>
             <div className="text-xs text-[hsl(var(--muted-foreground))] space-y-1">
-              <p>❄️ Mínima do período: {minTemp.toFixed(1)}°C</p>
-              <p>📏 Amplitude térmica: {tempVariation.toFixed(1)}°C</p>
+              <p>❄️ Mínima do período: {(minTemp || 0).toFixed(1)}°C</p>
+              <p>📏 Amplitude térmica: {(tempVariation || 0).toFixed(1)}°C</p>
             </div>
           </div>
         </div>
@@ -140,7 +140,7 @@ export const TemperatureChart = ({ data }: TemperatureChartProps) => {
             <div className="flex flex-col items-end">
               <span className="text-4xl mb-1" style={{ color: weatherInfo.color }}>{weatherInfo.icon}</span>
               <div className="text-3xl font-bold mb-1" style={{ color: weatherInfo.color }}>
-                {maxTemp.toFixed(1)}°C
+                {(maxTemp || 0).toFixed(1)}°C
               </div>
               <div className="text-sm text-[hsl(var(--muted-foreground))]">
                 {weatherInfo.type}

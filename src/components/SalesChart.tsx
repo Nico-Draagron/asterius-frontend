@@ -84,10 +84,10 @@ export const SalesChart = ({ data }: SalesChartProps) => {
             <div className="text-xs text-[hsl(var(--muted-foreground))] space-y-1">
               <p>📈 Total acumulado: R$ {data.salesAccumulated.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
               <p>📊 Média diária: R$ {averageDaily.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-              {data.temperature !== undefined && (
+              {data.temperature !== undefined && data.temperature !== null && (
                 <p>🌡️ Temperatura: {data.temperature.toFixed(1)}°C</p>
               )}
-              <p>🌧️ Precipitação: {data.rain.toFixed(1)}mm</p>
+              <p>🌧️ Precipitação: {(data.rain || 0).toFixed(1)}mm</p>
             </div>
           </div>
         </div>
@@ -159,9 +159,10 @@ export const SalesChart = ({ data }: SalesChartProps) => {
               stroke="hsl(var(--muted-foreground))"
               tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
               tickFormatter={(value) => {
-                if (value >= 1000000) return `R$ ${(value/1000000).toFixed(1)}M`;
-                if (value >= 1000) return `R$ ${(value/1000).toFixed(0)}k`;
-                return `R$ ${value.toFixed(0)}`;
+                const numValue = Number(value) || 0;
+                if (numValue >= 1000000) return `R$ ${(numValue/1000000).toFixed(1)}M`;
+                if (numValue >= 1000) return `R$ ${(numValue/1000).toFixed(0)}k`;
+                return `R$ ${numValue.toFixed(0)}`;
               }}
               domain={['dataMin - 1000', 'dataMax + 1000']}
             />
@@ -171,9 +172,10 @@ export const SalesChart = ({ data }: SalesChartProps) => {
               stroke="hsl(var(--muted-foreground))"
               tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
               tickFormatter={(value) => {
-                if (value >= 1000000) return `${(value/1000000).toFixed(1)}M`;
-                if (value >= 1000) return `${(value/1000).toFixed(0)}k`;
-                return `${value.toFixed(0)}`;
+                const numValue = Number(value) || 0;
+                if (numValue >= 1000000) return `${(numValue/1000000).toFixed(1)}M`;
+                if (numValue >= 1000) return `${(numValue/1000).toFixed(0)}k`;
+                return `${numValue.toFixed(0)}`;
               }}
             />
             <Tooltip content={<CustomTooltip />} />

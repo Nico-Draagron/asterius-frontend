@@ -1,0 +1,33 @@
+# Alternative Dockerfile usando serve (mais simples para Cloud Run)
+FROM node:20-alpine AS build
+WORKDIR /app
+
+# Copiar package files
+COPY package.json ./
+COPY package-lock.json* ./
+COPY bun.lockb* ./
+
+# Instalar dependências
+RUN npm install --legacy-peer-deps
+
+# Copiar código fonte
+COPY . .
+
+# Build da aplicação
+RUN npm run build
+
+# Stage de produção usando serve
+FROM node:20-alpine
+WORKDIR /app
+
+# Instalar serve globalmente
+RUN npm install -g serve
+
+# Copiar arquivos buildados
+COPY --from=build /app/dist ./dist
+
+# Expor porta 8080
+EXPOSE 8080
+
+# Usar serve para servir os arquivos estáticos
+CMD ["serve", "-s", "dist", "-l", "8080"]

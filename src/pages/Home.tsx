@@ -182,8 +182,11 @@ const Home = () => {
   
   const todayIndex = getTodayIndex();
   
-  // Calculate KPIs from today's data (data atual)
-  const todaysSales = apiData?.predictions.length > todayIndex ? apiData.predictions[todayIndex].value : 0;
+  // Calculate KPIs from today's data (data atual) - Handle null values safely
+  const todaysSales = apiData?.predictions.length > todayIndex 
+    ? (apiData.predictions[todayIndex].value ?? 0) 
+    : 0;
+  
   // Buscar a maior temperatura máxima entre todos os registros do dia de hoje
   let todaysTemp = 22;
   if (apiData?.weather_data && apiData.weather_data.length > 0) {
@@ -191,16 +194,19 @@ const Home = () => {
     // Filtra todos os registros do dia de hoje
     const todayMaxTemps = apiData.weather_data
       .filter(w => w.date === todayDate)
-      .map(w => w.temp_max ?? w.temperature ?? w.temp_media ?? -Infinity);
+      .map(w => w.temp_max ?? w.temperature ?? w.temp_media ?? -Infinity)
+      .filter(temp => temp > -Infinity);
     if (todayMaxTemps.length > 0) {
       todaysTemp = Math.round(Math.max(...todayMaxTemps));
     }
   }
+  
   const todaysRain = apiData?.weather_data.length > todayIndex 
-    ? apiData.weather_data[todayIndex].precipitation
+    ? (apiData.weather_data[todayIndex].precipitation ?? 0)
     : 0;
+    
   const todaysRadiation = apiData?.weather_data.length > todayIndex 
-    ? apiData.weather_data[todayIndex].radiation || 800
+    ? (apiData.weather_data[todayIndex].radiation ?? 800)
     : 800;
 
   // Obter dia da semana atual (0 = Segunda, 6 = Domingo)
@@ -356,7 +362,7 @@ const Home = () => {
             <div className="mt-2 text-xs">
               📊 {apiData.predictions.length} previsões carregadas | 
               📅 Hoje (índice {todayIndex}): {apiData.predictions[todayIndex]?.date} | 
-              💰 Vendas: R$ {todaysSales.toFixed(2)}
+              💰 Vendas: R$ {(todaysSales || 0).toFixed(2)}
             </div>
           </div>
         )}
@@ -381,7 +387,7 @@ const Home = () => {
           />
           <KPICard 
             title="Precipitação Acumulada para hoje" 
-            value={`${todaysRain.toFixed(1)}mm`} 
+            value={`${(todaysRain || 0).toFixed(1)}mm`} 
             icon={CloudRain} 
           />
         </div>
