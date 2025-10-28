@@ -19,25 +19,22 @@ RUN npm run build
 FROM nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Configurar nginx para SPA
-COPY <<EOF /etc/nginx/conf.d/default.conf
-server {
-    listen 80;
-    server_name localhost;
-    root /usr/share/nginx/html;
-    index index.html;
-    
-    location / {
-        try_files \$uri \$uri/ /index.html;
-    }
-    
-    location /api {
-        proxy_pass \$VITE_API_URL;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-    }
-}
-EOF
+# Criar configuração nginx para SPA
+RUN echo 'server {\n\
+    listen 80;\n\
+    server_name localhost;\n\
+    root /usr/share/nginx/html;\n\
+    index index.html;\n\
+    \n\
+    location / {\n\
+        try_files $uri $uri/ /index.html;\n\
+    }\n\
+    \n\
+    location /health {\n\
+        return 200 "healthy";\n\
+        add_header Content-Type text/plain;\n\
+    }\n\
+}' > /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
