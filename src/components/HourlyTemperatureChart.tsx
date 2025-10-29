@@ -67,6 +67,8 @@ export const HourlyTemperatureChart = ({ date, data, onClose }: HourlyTemperatur
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
+      // Garante que temperature é número antes de chamar toFixed
+      const tempValue = typeof data.temperature === 'number' && !isNaN(data.temperature) ? data.temperature : 0;
       return (
         <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg p-4 shadow-xl">
           <div className="border-b border-[hsl(var(--border))] pb-2 mb-2">
@@ -85,7 +87,7 @@ export const HourlyTemperatureChart = ({ date, data, onClose }: HourlyTemperatur
               <span className="text-2xl">🌡️</span>
               <div>
                 <p className="text-lg font-bold" style={{ color: '#ef4444' }}>
-                  {data.temperature.toFixed(1)}°C
+                  {tempValue.toFixed(1)}°C
                 </p>
                 <p className="text-xs text-[hsl(var(--muted-foreground))]">
                   Temperatura por hora
