@@ -95,7 +95,8 @@ const Home = () => {
   // Função para formatar data para dia da semana
   const formatDayOfWeek = (dateString: string) => {
     const date = new Date(dateString);
-    const days = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+    // Corrigido: getDay() retorna 0=Domingo, 1=Segunda...
+    const days = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
     return days[date.getDay()];
   };
 

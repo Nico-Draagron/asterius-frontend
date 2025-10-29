@@ -104,11 +104,13 @@ export const TemperatureChart = ({ data }: TemperatureChartProps) => {
 
   const handlePointClick = async (data: any) => {
     if (data && data.fullDate) {
-      setSelectedDate(data.fullDate);
+      // Garante formato YYYY-MM-DD sem timezone
+      const dateStr = new Date(data.fullDate).toISOString().split('T')[0];
+      setSelectedDate(dateStr);
       setIsLoadingHourly(true);
       setShowHourlyChart(true);
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/hourly-weather/${data.fullDate}/1`); // lojaId fixo, pode ser prop
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/hourly-weather/${dateStr}/1`); // lojaId fixo, pode ser prop
         const result = await response.json();
         if (result.success && result.data) {
           setHourlyData(result.data.map((d: any) => ({ hour: d.hour, temp_max: d.temp_max, temp_min: d.temp_min })));

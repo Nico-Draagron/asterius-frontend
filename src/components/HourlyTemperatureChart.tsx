@@ -29,7 +29,8 @@ export const HourlyTemperatureChart = ({ date, data, onClose }: HourlyTemperatur
       if (result.success && result.data) {
         setHourlyData(result.data.map((d: any) => ({
           hour: d.hour,
-          temperature: d.temperature,
+          // Se não vier temperature, usa temp_max ou média
+          temperature: typeof d.temperature === 'number' ? d.temperature : (typeof d.temp_max === 'number' && typeof d.temp_min === 'number' ? (d.temp_max + d.temp_min) / 2 : d.temp_max ?? 0),
           temp_max: d.temp_max,
           temp_min: d.temp_min
         })));
