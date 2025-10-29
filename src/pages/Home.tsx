@@ -93,11 +93,12 @@ const Home = () => {
   }, []);
 
   // Função para formatar data para dia da semana
+  // Corrige bug de fuso: sempre interpreta a data como UTC (meio-dia UTC)
   const formatDayOfWeek = (dateString: string) => {
-    const date = new Date(dateString);
-    // Corrigido: getDay() retorna 0=Domingo, 1=Segunda...
+    // Força horário para meio-dia UTC para evitar problemas de fuso
+    const date = new Date(dateString + 'T12:00:00Z');
     const days = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-    return days[date.getDay()];
+    return days[date.getUTCDay()];
   };
 
   // Fetch real data from API
@@ -262,16 +263,16 @@ const Home = () => {
       );
     };
 
-    // Filtra apenas hoje (se houver) e todos os próximos dias futuros disponíveis
-    const today = new Date();
-    today.setHours(0,0,0,0);
+    // Filtra apenas hoje (se houver) e todos os próximos dias futuros disponíveis (comparando datas em UTC)
+    const todayUTC = new Date();
+    todayUTC.setUTCHours(0,0,0,0);
     const filtered = sortedPredictions.map((pred, idx) => ({ pred, weather: sortedWeather[idx] }))
       .filter(({ pred, weather }) => {
         if (!isUsefulDay(pred, weather)) return false;
-        // Só mantém datas a partir de hoje
-        const dataDate = new Date(pred.date);
-        dataDate.setHours(0,0,0,0);
-        return dataDate >= today;
+        // Força data do backend para UTC (meio-dia UTC para evitar fuso)
+        const dataDate = new Date(pred.date + 'T12:00:00Z');
+        dataDate.setUTCHours(0,0,0,0);
+        return dataDate >= todayUTC;
       }); // Mostra hoje e todos os próximos dias disponíveis
 
     salesData = filtered.map(({ pred, weather }) => ({
