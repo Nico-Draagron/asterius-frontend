@@ -262,8 +262,17 @@ const Home = () => {
       );
     };
 
+    // Filtra apenas hoje (se houver) e todos os próximos dias futuros disponíveis
+    const today = new Date();
+    today.setHours(0,0,0,0);
     const filtered = sortedPredictions.map((pred, idx) => ({ pred, weather: sortedWeather[idx] }))
-      .filter(({ pred, weather }) => isUsefulDay(pred, weather));
+      .filter(({ pred, weather }) => {
+        if (!isUsefulDay(pred, weather)) return false;
+        // Só mantém datas a partir de hoje
+        const dataDate = new Date(pred.date);
+        dataDate.setHours(0,0,0,0);
+        return dataDate >= today;
+      }); // Mostra hoje e todos os próximos dias disponíveis
 
     salesData = filtered.map(({ pred, weather }, index) => ({
       day: pred.date ? formatDayOfWeek(pred.date) : `Dia ${index + 1}`,
