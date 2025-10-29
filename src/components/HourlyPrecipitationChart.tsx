@@ -74,6 +74,8 @@ export const HourlyPrecipitationChart = ({ date, data, onClose }: HourlyPrecipit
     if (active && payload && payload.length) {
       const d = payload[0].payload;
       const rainIntensity = getRainIntensity(d.precipitation);
+      // Garante que precipitation é número antes de chamar toFixed
+      const precipitationValue = typeof d.precipitation === 'number' && !isNaN(d.precipitation) ? d.precipitation : 0;
       return (
         <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg p-4 shadow-xl">
           <div className="border-b border-[hsl(var(--border))] pb-2 mb-2">
@@ -92,7 +94,7 @@ export const HourlyPrecipitationChart = ({ date, data, onClose }: HourlyPrecipit
               <span className="text-2xl">{rainIntensity.icon}</span>
               <div>
                 <p className="text-lg font-bold" style={{ color: rainIntensity.color }}>
-                  {d.precipitation.toFixed(1)}mm/h
+                  {precipitationValue.toFixed(1)}mm/h
                 </p>
                 <p className="text-xs text-[hsl(var(--muted-foreground))]">
                   {rainIntensity.type}
