@@ -274,8 +274,8 @@ const Home = () => {
         return dataDate >= today;
       }); // Mostra hoje e todos os próximos dias disponíveis
 
-    salesData = filtered.map(({ pred, weather }, index) => ({
-      day: pred.date ? formatDayOfWeek(pred.date) : `Dia ${index + 1}`,
+    salesData = filtered.map(({ pred, weather }) => ({
+      day: pred.date ? formatDayOfWeek(pred.date) : '',
       fullDate: pred.date,
       sales: pred.value || 0,
       rain: weather?.precipitation || 0,

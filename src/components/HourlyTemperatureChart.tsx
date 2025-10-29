@@ -48,22 +48,34 @@ export const HourlyTemperatureChart = ({ date, data, onClose }: HourlyTemperatur
     fetchHourlyData();
   }, [date]);
 
-  // Normalizar o campo hour para garantir que seja número inteiro (0-23)
+  // Normalizar hour para número (0-23) e garantir que temperaturas são números
   const normalizeHour = (h: any) => {
     if (typeof h === 'number') return h;
     if (typeof h === 'string') {
-      const n = parseInt(h);
-      return isNaN(n) ? h : n;
+      // Extrai número antes dos dois pontos, ex: '10:00' => 10
+      const match = h.match(/^(\d{1,2})/);
+      if (match) {
+        const n = parseInt(match[1], 10);
+        return isNaN(n) ? 0 : n;
+      }
+      return 0;
     }
-    return h;
+    return 0;
+  };
+  const normalizeTemp = (t: any) => {
+    const n = typeof t === 'number' ? t : parseFloat(t);
+    return isNaN(n) ? 0 : n;
   };
   const displayData = hourlyData.map(d => ({
     ...d,
-    hour: normalizeHour(d.hour)
+    hour: normalizeHour(d.hour),
+    temperature: normalizeTemp(d.temperature),
+    temp_max: normalizeTemp(d.temp_max),
+    temp_min: normalizeTemp(d.temp_min)
   }));
-  const maxTemp = Math.max(...displayData.map(d => d.temp_max));
-  const minTemp = Math.min(...displayData.map(d => d.temp_min));
-  const avgTemp = displayData.reduce((sum, d) => sum + d.temp_max, 0) / (displayData.length || 1);
+  const maxTemp = Math.max(...displayData.map(d => d.temp_max ?? 0));
+  const minTemp = Math.min(...displayData.map(d => d.temp_min ?? 0));
+  const avgTemp = displayData.reduce((sum, d) => sum + (d.temp_max ?? 0), 0) / (displayData.length || 1);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
