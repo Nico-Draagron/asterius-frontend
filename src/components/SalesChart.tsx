@@ -101,7 +101,7 @@ export const SalesChart = ({ data }: SalesChartProps) => {
       <div className="flex justify-between items-start mb-6">
         <div>
           <h2 className="text-xl font-bold text-[hsl(var(--card-foreground))] mb-2">
-            💰 Previsão de Vendas - 7 Dias
+            💰 Previsão de vendas
           </h2>
           {/* Mensagem removida conforme solicitado */}
         </div>
@@ -112,9 +112,7 @@ export const SalesChart = ({ data }: SalesChartProps) => {
           <div className="text-lg font-bold text-blue-600">
             R$ {totalSales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </div>
-          <div className="text-xs text-[hsl(var(--muted-foreground))]">
-            Média diária: R$ {averageDaily.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-          </div>
+          {/* Média diária removida conforme solicitado */}
         </div>
       </div>
 
