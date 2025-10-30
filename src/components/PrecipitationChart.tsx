@@ -234,8 +234,11 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
             // Normaliza todos os hours do backend para HH:00
             const found = hourlyData.find(d => {
               if (!d.hour) return false;
+              let hourStrRaw = d.hour;
+              if (typeof hourStrRaw === 'number') hourStrRaw = hourStrRaw.toString();
+              if (typeof hourStrRaw !== 'string') return false;
               // Aceita "7:00", "07:00", "7", "07"
-              const h = d.hour.split(":")[0].padStart(2, '0');
+              const h = hourStrRaw.split(":")[0].padStart(2, '0');
               return `${h}:00` === hourStr;
             });
             return {
