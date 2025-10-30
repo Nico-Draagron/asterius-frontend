@@ -60,16 +60,27 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
   };
   
   // Função para lidar com cliques no gráfico
+  // Corrigido: buscar do endpoint correto de precipitação horária
   const handleBarClick = async (data: { fullDate?: string }) => {
     if (data && data.fullDate) {
       setSelectedDate(data.fullDate);
       setIsLoadingHourly(true);
       setShowHourlyChart(true);
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/hourly-weather/${data.fullDate}/${lojaId}`);
+        // Busca do endpoint correto
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/hourly-precipitation/${data.fullDate}`);
         const result = await response.json();
         if (result.success && result.data) {
-          setHourlyData(result.data);
+          // Normaliza para o formato esperado pelo HourlyPrecipitationChart
+          setHourlyData(result.data.map((d: HourlyPrecipitationData) => ({
+            hour: d.hour,
+            precipitation: (typeof d.precipitacao_total === 'number' ? d.precipitacao_total :
+              typeof d.Chuva_aberta === 'number' ? d.Chuva_aberta :
+              typeof d.precipitation === 'number' ? d.precipitation : 0),
+            temperature: (typeof d.temperature === 'number' ? d.temperature :
+              typeof d.temp_media === 'number' ? d.temp_media :
+              typeof d.temp_max === 'number' ? d.temp_max : undefined)
+          })));
         } else {
           setHourlyData([]);
         }
@@ -229,26 +240,7 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
       {showHourlyChart && selectedDate && (
         <HourlyPrecipitationChart
           date={selectedDate}
-          data={Array.from({ length: 24 }, (_, i) => {
-            const hourStr = `${i.toString().padStart(2, '0')}:00`;
-            // Normaliza todos os hours do backend para HH:00
-            const found = hourlyData.find(d => {
-              if (!d.hour) return false;
-              let hourStrRaw = d.hour;
-              if (typeof hourStrRaw === 'number') hourStrRaw = hourStrRaw.toString();
-              if (typeof hourStrRaw !== 'string') return false;
-              // Aceita "7:00", "07:00", "7", "07"
-              const h = hourStrRaw.split(":")[0].padStart(2, '0');
-              return `${h}:00` === hourStr;
-            });
-            return {
-              hour: hourStr,
-              precipitation: found && typeof found.precipitacao_total === 'number'
-                ? found.precipitacao_total
-                : (found && typeof found.precipitation === 'number' ? found.precipitation : 0),
-              temperature: found && typeof found.temperature === 'number' ? found.temperature : undefined
-            };
-          })}
+          data={hourlyData}
           onClose={() => {
             setShowHourlyChart(false);
             setHourlyData([]);

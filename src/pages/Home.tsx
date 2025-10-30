@@ -92,13 +92,12 @@ const Home = () => {
     return () => window.removeEventListener('resize', updateOrientation);
   }, []);
 
-  // Função para formatar data para dia da semana
-  // Corrige bug de fuso: sempre interpreta a data como UTC (meio-dia UTC)
+  // Função para formatar data para dia da semana (corrigido: usa localtime, não UTC)
   const formatDayOfWeek = (dateString: string) => {
-    // Força horário para meio-dia UTC para evitar problemas de fuso
-    const date = new Date(dateString + 'T12:00:00Z');
+    // Usa new Date(dateString) para pegar o dia local corretamente
+    const date = new Date(dateString);
     const days = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-    return days[date.getUTCDay()];
+    return days[date.getDay()];
   };
 
   // Fetch real data from API
