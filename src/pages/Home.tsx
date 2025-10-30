@@ -92,10 +92,10 @@ const Home = () => {
     return () => window.removeEventListener('resize', updateOrientation);
   }, []);
 
-  // Função para formatar data para dia da semana (corrigido: usa localtime, não UTC)
+  // Função para formatar data para dia da semana (garante fuso local, não UTC)
   const formatDayOfWeek = (dateString: string) => {
-    // Usa new Date(dateString) para pegar o dia local corretamente
-    const date = new Date(dateString);
+    // Usa new Date(dateString + 'T00:00:00') para garantir localtime
+    const date = new Date(dateString + 'T00:00:00');
     const days = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
     return days[date.getDay()];
   };
@@ -399,7 +399,13 @@ const Home = () => {
         {/* KPI Cards - Dados de Hoje - Responsive grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6">
           <KPICardEnhanced
-            title={`Previsão de Hoje (${salesData[0]?.fullDate ? new Date(salesData[0].fullDate).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' }) : ''})`}
+            title={`Previsão de Hoje (${(() => {
+              const today = new Date();
+              const days = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+              const diaSemana = days[today.getDay()];
+              const dataFormatada = today.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+              return `${diaSemana}, ${dataFormatada}`;
+            })()})`}
             value={`R$ ${todaysSales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
             icon={TrendingUp}
             trend={classificacaoVendas}
