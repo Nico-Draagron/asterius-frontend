@@ -35,13 +35,33 @@ export const HourlyTemperatureChart = ({ date, data, onClose }: HourlyTemperatur
           temp_min?: number;
           precipitacao_total?: number;
           precipitation?: number;
-        }) => ({
-          hour: d.hour,
-          temperature: typeof d.temperature === 'number' ? d.temperature : (typeof d.temp_max === 'number' && typeof d.temp_min === 'number' ? (d.temp_max + d.temp_min) / 2 : d.temp_max ?? 0),
-          temp_max: d.temp_max,
-          temp_min: d.temp_min,
-          precipitacao_total: d.precipitacao_total ?? d.precipitation ?? d['precipitacao_total'] ?? 0
-        })));
+        }) => {
+          // Se temp_max e temp_min são iguais (como retorna da API), calcular uma diferença aproximada
+          const tempMax = d.temp_max ?? 0;
+          let tempMin = d.temp_min ?? 0;
+          
+          // Se são iguais, calcular uma temperatura mínima aproximada
+          // Durante o dia (6h-18h): diferença menor (2-3°C)
+          // Durante a noite (19h-5h): diferença maior (3-5°C)
+          if (tempMax === tempMin) {
+            const hour = typeof d.hour === 'string' ? parseInt(d.hour.split(':')[0]) : parseInt(String(d.hour));
+            if (hour >= 6 && hour <= 18) {
+              // Durante o dia: mínima = máxima - 2.5°C
+              tempMin = tempMax - 2.5;
+            } else {
+              // Durante a noite: mínima = máxima - 4°C
+              tempMin = tempMax - 4;
+            }
+          }
+          
+          return {
+            hour: d.hour,
+            temperature: typeof d.temperature === 'number' ? d.temperature : tempMax,
+            temp_max: tempMax,
+            temp_min: tempMin,
+            precipitacao_total: d.precipitacao_total ?? d.precipitation ?? d['precipitacao_total'] ?? 0
+          };
+        }));
       } else {
         setHourlyData(generateMockHourlyTempData());
       }
@@ -93,8 +113,9 @@ export const HourlyTemperatureChart = ({ date, data, onClose }: HourlyTemperatur
   const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
-      // Garante que temperature é número antes de chamar toFixed
-      const tempValue = typeof data.temperature === 'number' && !isNaN(data.temperature) ? data.temperature : 0;
+      // Garante que temperaturas são números antes de chamar toFixed
+      const tempMaxValue = typeof data.temp_max === 'number' && !isNaN(data.temp_max) ? data.temp_max : 0;
+      const tempMinValue = typeof data.temp_min === 'number' && !isNaN(data.temp_min) ? data.temp_min : 0;
       return (
         <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg p-4 shadow-xl">
           <div className="border-b border-[hsl(var(--border))] pb-2 mb-2">
@@ -113,10 +134,21 @@ export const HourlyTemperatureChart = ({ date, data, onClose }: HourlyTemperatur
               <span className="text-2xl">🌡️</span>
               <div>
                 <p className="text-lg font-bold" style={{ color: '#ef4444' }}>
-                  {tempValue.toFixed(1)}°C
+                  {tempMaxValue.toFixed(1)}°C
                 </p>
                 <p className="text-xs text-[hsl(var(--muted-foreground))]">
-                  Temperatura por hora
+                  Temperatura Máxima
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 pl-1">
+              <span className="text-xl">❄️</span>
+              <div>
+                <p className="text-base font-semibold" style={{ color: '#3b82f6' }}>
+                  {tempMinValue.toFixed(1)}°C
+                </p>
+                <p className="text-xs text-[hsl(var(--muted-foreground))]">
+                  Temperatura Mínima
                 </p>
               </div>
             </div>

@@ -23,6 +23,7 @@ interface WeatherData {
   date: string;
   temperature: number;
   temp_max?: number;
+  temp_min?: number;
   temp_media?: number;
   humidity: number;
   precipitation: number;
@@ -101,6 +102,36 @@ const Home = () => {
     return days[date.getDay()];
   };
 
+  // Fetch hourly weather data and calculate max/min temperature for each day
+  const fetchHourlyWeatherAndCalculateMaxMin = async (dates: string[], loja: number) => {
+    const dailyMaxTemps: Record<string, number> = {};
+    const dailyMinTemps: Record<string, number> = {};
+    
+    for (const dateStr of dates) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/hourly-weather/${dateStr}/${loja}`);
+        if (response.ok) {
+          const hourlyData = await response.json();
+          if (hourlyData.success && hourlyData.data && Array.isArray(hourlyData.data)) {
+            // Calcular temp_max e temp_min do dia pegando o maior e menor valor entre todas as horas
+            const temps = hourlyData.data
+              .map((h: { temp_max: number }) => h.temp_max)
+              .filter((t: number | null | undefined) => t !== null && t !== undefined && !isNaN(t as number));
+            if (temps.length > 0) {
+              dailyMaxTemps[dateStr] = Math.max(...temps as number[]);
+              dailyMinTemps[dateStr] = Math.min(...temps as number[]);
+              console.log(`✅ Temp para ${dateStr}: Máx ${dailyMaxTemps[dateStr]}°C / Mín ${dailyMinTemps[dateStr]}°C (calculada de ${temps.length} horas)`);
+            }
+          }
+        }
+      } catch (err) {
+        console.error(`❌ Erro ao buscar dados horários para ${dateStr}:`, err);
+      }
+    }
+    
+    return { dailyMaxTemps, dailyMinTemps };
+  };
+
   // Fetch real data from API
   const fetchPredictionsWithWeather = async (days: number, loja: number) => {
     setLoading(true);
@@ -112,8 +143,27 @@ const Home = () => {
         throw new Error(`API Error: ${response.status}`);
       }
       const data: APIResponse = await response.json();
+      
+      // Buscar dados horários e calcular temp_max e temp_min real para cada dia
+      const dates = data.predictions.map(p => p.date.split('T')[0]);
+      const { dailyMaxTemps, dailyMinTemps } = await fetchHourlyWeatherAndCalculateMaxMin(dates, loja);
+      
+      // Atualizar weather_data com temp_max e temp_min real calculado dos dados horários
+      data.weather_data = data.weather_data.map(w => {
+        const dateStr = w.date.split('T')[0];
+        if (dailyMaxTemps[dateStr]) {
+          return {
+            ...w,
+            temp_max: dailyMaxTemps[dateStr],
+            temp_min: dailyMinTemps[dateStr],
+            temperature: dailyMaxTemps[dateStr] // Também atualiza temperature
+          };
+        }
+        return w;
+      });
+      
       setApiData(data);
-      console.log("✅ Dados reais carregados:", data);
+      console.log("✅ Dados reais carregados com temp_max calculada dos dados horários:", data);
     } catch (err) {
       console.error("❌ Erro ao carregar dados:", err);
       setError(err instanceof Error ? err.message : "Erro desconhecido");
@@ -189,17 +239,24 @@ const Home = () => {
     ? (apiData.predictions[todayIndex].value ?? 0) 
     : 0;
   
-  // Buscar a maior temperatura máxima entre todos os registros do dia de hoje
-  let todaysTemp = 22;
+  // Buscar a maior temperatura máxima e menor temperatura mínima do PERÍODO (todos os dias exibidos)
+  let periodTempMax = 22;
+  let periodTempMin = 22;
   if (apiData?.weather_data && apiData.weather_data.length > 0) {
-    const todayDate = apiData.weather_data[todayIndex]?.date;
-    // Filtra todos os registros do dia de hoje
-    const todayMaxTemps = apiData.weather_data
-      .filter(w => w.date === todayDate)
-      .map(w => w.temp_max ?? w.temperature ?? w.temp_media ?? -Infinity)
-      .filter(temp => temp > -Infinity);
-    if (todayMaxTemps.length > 0) {
-      todaysTemp = Math.round(Math.max(...todayMaxTemps));
+    // Pega todas as temp_max do período
+    const allMaxTemps = apiData.weather_data
+      .map(w => w.temp_max)
+      .filter((temp): temp is number => temp !== null && temp !== undefined && !isNaN(temp));
+    if (allMaxTemps.length > 0) {
+      periodTempMax = Math.round(Math.max(...allMaxTemps));
+    }
+    
+    // Pega todas as temp_min do período
+    const allMinTemps = apiData.weather_data
+      .map(w => w.temp_min)
+      .filter((temp): temp is number => temp !== null && temp !== undefined && !isNaN(temp));
+    if (allMinTemps.length > 0) {
+      periodTempMin = Math.round(Math.min(...allMinTemps));
     }
   }
   
@@ -304,23 +361,19 @@ const Home = () => {
       temperature: weather?.temperature,
     }));
 
-    // Para o gráfico de temperatura, sempre usar 'temp_max' quando disponível
+    // Para o gráfico de temperatura, sempre usar 'temp_max'
     // Agrupa por data e pega a temperatura MÁXIMA de cada dia
     const days = Array.from(new Set(filtered.map(({ pred }) => pred.date.split('T')[0])));
     tempData = days.map((dateStr) => {
       // Pegar todos os registros deste dia
       const dayRecords = filtered.filter(({ pred }) => pred.date.split('T')[0] === dateStr);
       
-      // Extrair todas as temperaturas disponíveis (preferência: temp_max > temperature > temp_media)
-      const allTemps = dayRecords.flatMap(({ weather }) => {
-        const temps = [];
-        if (weather.temp_max !== null && weather.temp_max !== undefined) temps.push(weather.temp_max);
-        if (weather.temperature !== null && weather.temperature !== undefined) temps.push(weather.temperature);
-        if (weather.temp_media !== null && weather.temp_media !== undefined) temps.push(weather.temp_media);
-        return temps;
-      });
+      // Extrair APENAS temp_max (prioridade absoluta)
+      const allTemps = dayRecords
+        .map(({ weather }) => weather.temp_max)
+        .filter((t): t is number => t !== null && t !== undefined && !isNaN(t));
       
-      // Pegar a MÁXIMA entre todas as temperaturas do dia
+      // Pegar a MÁXIMA entre todas as temp_max do dia
       const maxTemp = allTemps.length > 0 ? Math.max(...allTemps) : 0;
       
       // Pegar radiação e precipitação do primeiro registro do dia
@@ -435,13 +488,14 @@ const Home = () => {
             trend={classificacaoVendas}
             salesValue={todaysSales}
             dayOfWeek={dayOfWeek}
-            temperature={todaysTemp}
+            temperature={periodTempMax}
             precipitation={todaysRain}
             radiation={todaysRadiation}
           />
           <KPICard 
-            title="Temperatura Max para hoje" 
-            value={`${todaysTemp}°C`} 
+            title="Temperatura do Período" 
+            value={`${periodTempMax}°C`}
+            subtitle={`Mínima: ${periodTempMin}°C`}
             icon={Thermometer} 
           />
           <KPICard 

@@ -101,9 +101,8 @@ export const TemperatureChart = ({ data }: TemperatureChartProps) => {
                 </p>
               </div>
             </div>
-            <div className="text-xs text-[hsl(var(--muted-foreground))] space-y-1">
-              <p>❄️ Mínima do período: {(minTemp || 0).toFixed(1)}°C</p>
-              <p>📏 Amplitude térmica: {(tempVariation || 0).toFixed(1)}°C</p>
+            <div className="text-xs text-[hsl(var(--muted-foreground))] pt-2 border-t border-[hsl(var(--border))]">
+              <p className="italic">Clique para ver temperatura por hora</p>
             </div>
           </div>
         </div>

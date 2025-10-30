@@ -4,19 +4,23 @@ import { LineChart, Line, ResponsiveContainer } from "recharts";
 interface KPICardProps {
   title: string;
   value: string;
+  subtitle?: string;
   icon: LucideIcon;
   trend?: { value: number }[] | string;
   iconColor?: string;
 }
 
-export const KPICard = ({ title, value, icon: Icon, trend, iconColor = "hsl(var(--accent))" }: KPICardProps) => {
+export const KPICard = ({ title, value, subtitle, icon: Icon, trend, iconColor = "hsl(var(--accent))" }: KPICardProps) => {
   return (
     <div className="bg-[hsl(var(--card))] rounded-2xl p-6 shadow-lg hover-lift animate-fade-in">
       <div className="flex items-start justify-between mb-3">
         <h3 className="text-sm font-medium text-[hsl(var(--muted-foreground))]">{title}</h3>
         <Icon className="w-5 h-5" style={{ color: iconColor }} />
       </div>
-      <p className="text-3xl font-bold text-[hsl(var(--card-foreground))] mb-4">{value}</p>
+      <p className="text-3xl font-bold text-[hsl(var(--card-foreground))] mb-1">{value}</p>
+      {subtitle && (
+        <p className="text-sm text-[hsl(var(--muted-foreground))] mb-3">{subtitle}</p>
+      )}
       {trend && Array.isArray(trend) && trend.length > 0 && (
         <div className="h-12 -mx-2">
           <ResponsiveContainer width="100%" height="100%">
