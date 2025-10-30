@@ -80,13 +80,12 @@ export const HourlyPrecipitationChart = ({ date, data, onClose }: HourlyPrecipit
     fetchHourlyData();
   }, [date]);
 
-  // Sempre normaliza precipitation para número e zera valores irrelevantes (<2mm/h)
+  // Sempre normaliza precipitation para número e mostra todos os valores
   const normalizePrecip = (v: number | string | undefined) => typeof v === 'number' ? v : parseFloat(String(v)) || 0;
-  // Mostra todas as horas, mas zera valores <2mm/h
   const displayData = (data.length > 0 ? data : hourlyData)
     .map(d => ({
       ...d,
-      precipitation: normalizePrecip(d.precipitation) >= 2 ? normalizePrecip(d.precipitation) : 0
+      precipitation: normalizePrecip(d.precipitation)
     }));
 
   interface TooltipProps {

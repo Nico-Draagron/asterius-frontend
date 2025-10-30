@@ -80,7 +80,7 @@ export const TemperatureChart = ({ data }: TemperatureChartProps) => {
             <p className="font-bold text-[hsl(var(--card-foreground))] text-lg">{label}</p>
             {data.fullDate && (
               <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                {new Date(data.fullDate).toLocaleDateString('pt-BR', { 
+                {new Date(data.fullDate + 'T00:00:00').toLocaleDateString('pt-BR', { 
                   weekday: 'long', 
                   day: '2-digit', 
                   month: '2-digit', 

@@ -282,47 +282,62 @@ const Home = () => {
       );
     };
 
-    // Filtra apenas hoje (se houver) e todos os próximos dias futuros disponíveis (comparando datas em UTC)
-    const todayUTC = new Date();
-    todayUTC.setUTCHours(0,0,0,0);
+    // Filtra apenas hoje e todos os próximos dias futuros disponíveis
+    // CORRIGIDO: usar data local do Brasil, não UTC
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD local
+    
     const filtered = sortedPredictions.map((pred, idx) => ({ pred, weather: sortedWeather[idx] }))
       .filter(({ pred, weather }) => {
         if (!isUsefulDay(pred, weather)) return false;
-        // Força data do backend para UTC (meio-dia UTC para evitar fuso)
-        const dataDate = new Date(pred.date + 'T12:00:00Z');
-        dataDate.setUTCHours(0,0,0,0);
-        return dataDate >= todayUTC;
-      }); // Mostra hoje e todos os próximos dias disponíveis
+        // Comparar data sem timezone
+        const predDate = pred.date.split('T')[0]; // YYYY-MM-DD
+        return predDate >= todayStr; // Hoje ou futuro
+      });
 
     salesData = filtered.map(({ pred, weather }) => ({
-      day: pred.date ? formatDayOfWeek(pred.date) : '',
-      fullDate: pred.date,
+      day: pred.date ? formatDayOfWeek(pred.date.split('T')[0]) : '',
+      fullDate: pred.date.split('T')[0], // CORRIGIDO: usar pred.date, não weather.date
       sales: pred.value || 0,
       rain: weather?.precipitation || 0,
       temperature: weather?.temperature,
     }));
 
-    // Para o gráfico, sempre usar 'temp_max' quando disponível (fallback para temperature/temp_media)
-    const days = Array.from(new Set(filtered.map(({ weather }) => weather.date)));
-    tempData = days.map((date, index) => {
-      const dayWeathers = filtered
-        .filter(({ weather }) => weather.date === date)
-        .map(({ weather }) => weather);
-      // Preferência: temp_max > temperature > temp_media
-      const temps = dayWeathers.map(w => (w.temp_max ?? w.temperature ?? w.temp_media ?? -Infinity));
-      const maxTemp = Math.max(...temps);
+    // Para o gráfico de temperatura, sempre usar 'temp_max' quando disponível
+    // Agrupa por data e pega a temperatura MÁXIMA de cada dia
+    const days = Array.from(new Set(filtered.map(({ pred }) => pred.date.split('T')[0])));
+    tempData = days.map((dateStr) => {
+      // Pegar todos os registros deste dia
+      const dayRecords = filtered.filter(({ pred }) => pred.date.split('T')[0] === dateStr);
+      
+      // Extrair todas as temperaturas disponíveis (preferência: temp_max > temperature > temp_media)
+      const allTemps = dayRecords.flatMap(({ weather }) => {
+        const temps = [];
+        if (weather.temp_max !== null && weather.temp_max !== undefined) temps.push(weather.temp_max);
+        if (weather.temperature !== null && weather.temperature !== undefined) temps.push(weather.temperature);
+        if (weather.temp_media !== null && weather.temp_media !== undefined) temps.push(weather.temp_media);
+        return temps;
+      });
+      
+      // Pegar a MÁXIMA entre todas as temperaturas do dia
+      const maxTemp = allTemps.length > 0 ? Math.max(...allTemps) : 0;
+      
+      // Pegar radiação e precipitação do primeiro registro do dia
+      const firstRecord = dayRecords[0]?.weather;
+      
       return {
-        day: date ? formatDayOfWeek(date) : `Dia ${index + 1}`,
-        fullDate: date,
+        day: dateStr ? formatDayOfWeek(dateStr) : '',
+        fullDate: dateStr,
         value: maxTemp,
-        radiation: dayWeathers[0]?.radiation,
-        precipitation: dayWeathers[0]?.precipitation || 0,
+        radiation: firstRecord?.radiation,
+        precipitation: firstRecord?.precipitation || 0,
       };
     });
 
-    rainData = filtered.map(({ weather }, index) => ({
-      day: weather.date ? formatDayOfWeek(weather.date) : `Dia ${index + 1}`,
-      fullDate: weather.date,
+    rainData = filtered.map(({ pred, weather }) => ({
+      day: pred.date ? formatDayOfWeek(pred.date.split('T')[0]) : '',
+      fullDate: pred.date.split('T')[0],
       value: weather.precipitation || 0,
     }));
   }

@@ -25,30 +25,28 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
   // Validação dos dados
   const chartData = Array.isArray(data) ? data : [];
   
-  // Normaliza valores: <2mm vira 0mm, não contam para totais
-  const normalizeRain = (v: number) => (v >= 2 ? v : 0);
+  // Calcular precipitação acumulada e estatísticas
   let accumulated = 0;
   const processedData = chartData.map((item, index) => {
-    const rain = normalizeRain(item.value);
-    accumulated += rain;
+    accumulated += item.value;
     return {
       ...item,
-      rainDaily: rain,
+      rainDaily: item.value,
       rainAccumulated: accumulated,
       dayIndex: index
     };
   });
-  // Só considera valores >=2mm para totais e estatísticas
-  const precipitations = chartData.map(d => normalizeRain(d.value));
-  const totalRain = precipitations.reduce((a, b) => a + b, 0);
+  
+  const precipitations = chartData.map(d => d.value);
+  const totalRain = accumulated;
   const avgRain = precipitations.length > 0 ? totalRain / precipitations.length : 0;
   const maxRain = precipitations.length > 0 ? Math.max(...precipitations) : 0;
-  const rainyDays = precipitations.filter(p => p >= 2).length; // Dias com chuva relevante
+  const rainyDays = precipitations.filter(p => p > 0.1).length; // Dias com chuva significativa
   
   // Classificar tipo de precipitação
-  // Para tooltip: se <2mm, mostra "Sem Chuva"
   const getRainType = (rain: number) => {
-    if (rain < 2) return { type: "Sem Chuva", icon: "☀️", color: "#f59e0b" };
+    if (rain === 0) return { type: "Sem Chuva", icon: "☀️", color: "#f59e0b" };
+    if (rain < 2.5) return { type: "Garoa", icon: "🌦️", color: "#10b981" };
     if (rain < 10) return { type: "Chuva Fraca", icon: "🌧️", color: "#3b82f6" };
     if (rain < 50) return { type: "Chuva Moderada", icon: "⛈️", color: "#8b5cf6" };
     return { type: "Chuva Forte", icon: "🌩️", color: "#ef4444" };
@@ -102,8 +100,7 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
   const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
-      // Garante que rainDaily <2mm aparece como 0mm e "Sem Chuva"
-      const rainValue = typeof data.rainDaily === 'number' ? (data.rainDaily >= 2 ? data.rainDaily : 0) : 0;
+      const rainValue = data.rainDaily || 0;
       const rainInfo = getRainType(rainValue);
       return (
         <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg p-4 shadow-xl">
@@ -111,7 +108,7 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
             <p className="font-bold text-[hsl(var(--card-foreground))] text-lg">{label}</p>
             {data.fullDate && (
               <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                {new Date(data.fullDate).toLocaleDateString('pt-BR', { 
+                {new Date(data.fullDate + 'T00:00:00').toLocaleDateString('pt-BR', { 
                   weekday: 'long', 
                   day: '2-digit', 
                   month: '2-digit', 
