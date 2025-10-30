@@ -140,7 +140,7 @@ export const TemperatureChart = ({ data }: TemperatureChartProps) => {
       <div className="flex justify-between items-start mb-6">
         <div>
           <h2 className="text-xl font-bold text-[hsl(var(--card-foreground))] mb-2">
-            🌡️ Previsão de Temperatura Max- 7 Dias
+            🌡️ Previsão de Temperatura Max
           </h2>
           <p className="text-sm text-[hsl(var(--muted-foreground))]">
             Acompanhe as variações térmicas previstas

@@ -25,28 +25,30 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
   // Validação dos dados
   const chartData = Array.isArray(data) ? data : [];
   
-  // Calcular precipitação acumulada e estatísticas
+  // Normaliza valores: <2mm vira 0mm, não contam para totais
+  const normalizeRain = (v: number) => (v >= 2 ? v : 0);
   let accumulated = 0;
   const processedData = chartData.map((item, index) => {
-    accumulated += item.value;
+    const rain = normalizeRain(item.value);
+    accumulated += rain;
     return {
       ...item,
-      rainDaily: item.value,
+      rainDaily: rain,
       rainAccumulated: accumulated,
       dayIndex: index
     };
   });
-  
-  const precipitations = chartData.map(d => d.value);
-  const totalRain = accumulated;
+  // Só considera valores >=2mm para totais e estatísticas
+  const precipitations = chartData.map(d => normalizeRain(d.value));
+  const totalRain = precipitations.reduce((a, b) => a + b, 0);
   const avgRain = precipitations.length > 0 ? totalRain / precipitations.length : 0;
   const maxRain = precipitations.length > 0 ? Math.max(...precipitations) : 0;
-  const rainyDays = precipitations.filter(p => p > 0.1).length; // Dias com chuva significativa
+  const rainyDays = precipitations.filter(p => p >= 2).length; // Dias com chuva relevante
   
   // Classificar tipo de precipitação
+  // Para tooltip: se <2mm, mostra "Sem Chuva"
   const getRainType = (rain: number) => {
-    if (rain === 0) return { type: "Sem Chuva", icon: "☀️", color: "#f59e0b" };
-    if (rain < 2.5) return { type: "Garoa", icon: "🌦️", color: "#10b981" };
+    if (rain < 2) return { type: "Sem Chuva", icon: "☀️", color: "#f59e0b" };
     if (rain < 10) return { type: "Chuva Fraca", icon: "🌧️", color: "#3b82f6" };
     if (rain < 50) return { type: "Chuva Moderada", icon: "⛈️", color: "#8b5cf6" };
     return { type: "Chuva Forte", icon: "🌩️", color: "#ef4444" };
@@ -100,8 +102,9 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
   const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
-      const rainInfo = getRainType(data.rainDaily);
-      
+      // Garante que rainDaily <2mm aparece como 0mm e "Sem Chuva"
+      const rainValue = typeof data.rainDaily === 'number' ? (data.rainDaily >= 2 ? data.rainDaily : 0) : 0;
+      const rainInfo = getRainType(rainValue);
       return (
         <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg p-4 shadow-xl">
           <div className="border-b border-[hsl(var(--border))] pb-2 mb-2">
@@ -122,7 +125,7 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
               <span className="text-2xl">{rainInfo.icon}</span>
               <div>
                 <p className="text-lg font-bold" style={{ color: rainInfo.color }}>
-                  {(data.rainDaily || 0).toFixed(1)}mm
+                  {rainValue.toFixed(1)}mm
                 </p>
                 <p className="text-xs text-[hsl(var(--muted-foreground))]">
                   {rainInfo.type}
@@ -130,10 +133,7 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
               </div>
             </div>
             <div className="text-xs text-[hsl(var(--muted-foreground))] space-y-1">
-              <p>💧 Acumulado até aqui: {(data.rainAccumulated || 0).toFixed(1)}mm</p>
-              <p>📊 Média do período: {(avgRain || 0).toFixed(1)}mm/dia</p>
               <p>⛈️ Pico máximo: {(maxRain || 0).toFixed(1)}mm</p>
-              <p>🌧️ Dias chuvosos: {rainyDays} de 7</p>
               <p>💦 Total previsto: {(totalRain || 0).toFixed(1)}mm</p>
               <div className="mt-2 pt-1 border-t border-[hsl(var(--border))]">
                 <p className="text-blue-600 font-semibold">👆 Clique para ver detalhes por hora</p>
@@ -151,7 +151,7 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
       <div className="flex justify-between items-start mb-6">
         <div>
           <h2 className="text-xl font-bold text-[hsl(var(--card-foreground))] mb-2">
-            🌧️ Previsão de Precipitação - 7 Dias
+            🌧️ Previsão de Precipitação 
           </h2>
           <p className="text-sm text-[hsl(var(--muted-foreground))]">
             Clique em um dia para ver precipitação por hora
@@ -240,7 +240,11 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
       {showHourlyChart && selectedDate && (
         <HourlyPrecipitationChart
           date={selectedDate}
-          data={hourlyData}
+          data={hourlyData.map((d) => ({
+            hour: d.hour,
+            precipitation: typeof d.precipitation === 'number' ? d.precipitation : 0,
+            temperature: d.temperature
+          }))}
           onClose={() => {
             setShowHourlyChart(false);
             setHourlyData([]);

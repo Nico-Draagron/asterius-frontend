@@ -80,15 +80,14 @@ export const HourlyPrecipitationChart = ({ date, data, onClose }: HourlyPrecipit
     fetchHourlyData();
   }, [date]);
 
-  // Sempre normaliza precipitation para número
+  // Sempre normaliza precipitation para número e zera valores irrelevantes (<2mm/h)
   const normalizePrecip = (v: number | string | undefined) => typeof v === 'number' ? v : parseFloat(String(v)) || 0;
-  // Exibe apenas chuvas relevantes (>=2mm/h)
+  // Mostra todas as horas, mas zera valores <2mm/h
   const displayData = (data.length > 0 ? data : hourlyData)
     .map(d => ({
       ...d,
-      precipitation: normalizePrecip(d.precipitation)
-    }))
-    .filter(d => d.precipitation >= 2);
+      precipitation: normalizePrecip(d.precipitation) >= 2 ? normalizePrecip(d.precipitation) : 0
+    }));
 
   interface TooltipProps {
     active?: boolean;
@@ -165,12 +164,6 @@ export const HourlyPrecipitationChart = ({ date, data, onClose }: HourlyPrecipit
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
               <p className="text-[hsl(var(--muted-foreground))]">Carregando dados horários...</p>
-            </div>
-          </div>
-        ) : displayData.length === 0 ? (
-          <div className="h-[400px] flex items-center justify-center text-muted-foreground">
-            <div className="text-center">
-              <p>Sem chuva relevante (&ge;2mm/h) prevista para este dia.</p>
             </div>
           </div>
         ) : (
