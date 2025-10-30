@@ -6,6 +6,7 @@ import { SalesChart } from "@/components/SalesChart";
 import { MiniChart } from "@/components/MiniChart";
 import { TemperatureChart } from "@/components/TemperatureChart";
 import { PrecipitationChart } from "@/components/PrecipitationChart";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import { classificadorVendas } from "@/lib/classificadorVendas";
 
 // API base URL
@@ -324,6 +325,14 @@ const Home = () => {
       fullDate: weather.date,
       value: weather.precipitation || 0,
     }));
+  }
+
+  // Estado para controlar quando mostrar a tela de loading
+  const isDataReady = !loading && apiData !== null && salesData.length > 0;
+
+  // Se os dados não estão prontos, mostrar tela de loading
+  if (!isDataReady) {
+    return <LoadingScreen />;
   }
 
   return (
