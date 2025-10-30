@@ -10,7 +10,12 @@ export const TemperatureChart = ({ data }: TemperatureChartProps) => {
   const [hoveredPoint, setHoveredPoint] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [showHourlyChart, setShowHourlyChart] = useState(false);
-  const [hourlyData, setHourlyData] = useState<any[]>([]);
+  interface HourlyTempData {
+    hour: string;
+    temp_max?: number;
+    temp_min?: number;
+  }
+  const [hourlyData, setHourlyData] = useState<HourlyTempData[]>([]);
   const [isLoadingHourly, setIsLoadingHourly] = useState(false);
 
   // Validação dos dados
@@ -58,7 +63,12 @@ export const TemperatureChart = ({ data }: TemperatureChartProps) => {
     
   const weatherInfo = getWeatherType(avgTemp, avgRadiation, avgPrecipitation);
   
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  interface CustomTooltipProps {
+    active?: boolean;
+    payload?: Array<{ payload: typeof chartData[number] }>;
+    label?: string;
+  }
+  const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       const temp = data.value;
@@ -102,7 +112,7 @@ export const TemperatureChart = ({ data }: TemperatureChartProps) => {
     return null;
   };
 
-  const handlePointClick = async (data: any) => {
+  const handlePointClick = async (data: { fullDate?: string }) => {
     if (data && data.fullDate) {
       // Garante formato YYYY-MM-DD sem timezone
       const dateStr = new Date(data.fullDate).toISOString().split('T')[0];
@@ -113,7 +123,7 @@ export const TemperatureChart = ({ data }: TemperatureChartProps) => {
         const response = await fetch(`${import.meta.env.VITE_API_URL}/hourly-weather/${dateStr}/1`); // lojaId fixo, pode ser prop
         const result = await response.json();
         if (result.success && result.data) {
-          setHourlyData(result.data.map((d: any) => ({ hour: d.hour, temp_max: d.temp_max, temp_min: d.temp_min })));
+          setHourlyData(result.data.map((d: { hour: string; temp_max?: number; temp_min?: number }) => ({ hour: d.hour, temp_max: d.temp_max, temp_min: d.temp_min })));
         } else {
           setHourlyData([]);
         }
@@ -164,13 +174,13 @@ export const TemperatureChart = ({ data }: TemperatureChartProps) => {
             <LineChart 
               data={chartData} 
               margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-              onMouseMove={(e: any) => {
+              onMouseMove={(e: { activeTooltipIndex?: number }) => {
                 if (e.activeTooltipIndex !== undefined) {
                   setHoveredPoint(e.activeTooltipIndex);
                 }
               }}
               onMouseLeave={() => setHoveredPoint(null)}
-              onClick={(e: any) => {
+              onClick={(e: { activePayload?: Array<{ payload: { fullDate?: string } }> }) => {
                 if (e && e.activePayload && e.activePayload[0]) {
                   handlePointClick(e.activePayload[0].payload);
                 }
@@ -234,7 +244,12 @@ export const TemperatureChart = ({ data }: TemperatureChartProps) => {
       {showHourlyChart && selectedDate && (
         <HourlyTemperatureChart
           date={selectedDate}
-          data={hourlyData}
+          data={hourlyData.map((d) => ({
+            hour: d.hour,
+            temperature: 0, // Valor neutro, pois não temos temperature aqui
+            temp_max: d.temp_max,
+            temp_min: d.temp_min
+          }))}
           onClose={() => {
             setShowHourlyChart(false);
             setHourlyData([]);

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import { X } from "lucide-react";
 
@@ -7,6 +7,7 @@ interface HourlyTempData {
   temperature: number;
   temp_max?: number;
   temp_min?: number;
+  precipitacao_total?: number;
 }
 
 interface HourlyTemperatureChartProps {
@@ -20,19 +21,26 @@ export const HourlyTemperatureChart = ({ date, data, onClose }: HourlyTemperatur
   const [isLoading, setIsLoading] = useState(true);
 
   // Buscar dados horários do backend
-  const fetchHourlyData = async () => {
+  const fetchHourlyData = useCallback(async () => {
     try {
       setIsLoading(true);
       const formattedDate = new Date(date).toISOString().split('T')[0]; // YYYY-MM-DD
       const response = await fetch(`${import.meta.env.VITE_API_URL}/hourly-weather/${formattedDate}/1`); // lojaId fixo, pode ser prop
       const result = await response.json();
       if (result.success && result.data) {
-        setHourlyData(result.data.map((d: any) => ({
+        setHourlyData(result.data.map((d: {
+          hour: string;
+          temperature?: number;
+          temp_max?: number;
+          temp_min?: number;
+          precipitacao_total?: number;
+          precipitation?: number;
+        }) => ({
           hour: d.hour,
-          // Se não vier temperature, usa temp_max ou média
           temperature: typeof d.temperature === 'number' ? d.temperature : (typeof d.temp_max === 'number' && typeof d.temp_min === 'number' ? (d.temp_max + d.temp_min) / 2 : d.temp_max ?? 0),
           temp_max: d.temp_max,
-          temp_min: d.temp_min
+          temp_min: d.temp_min,
+          precipitacao_total: d.precipitacao_total ?? d.precipitation ?? d['precipitacao_total'] ?? 0
         })));
       } else {
         setHourlyData(generateMockHourlyTempData());
@@ -42,17 +50,16 @@ export const HourlyTemperatureChart = ({ date, data, onClose }: HourlyTemperatur
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [date]);
 
   React.useEffect(() => {
     fetchHourlyData();
-  }, [date]);
+  }, [fetchHourlyData]);
 
   // Normalizar hour para número (0-23) e garantir que temperaturas são números
-  const normalizeHour = (h: any) => {
+  const normalizeHour = (h: number | string | undefined) => {
     if (typeof h === 'number') return h;
     if (typeof h === 'string') {
-      // Extrai número antes dos dois pontos, ex: '10:00' => 10
       const match = h.match(/^(\d{1,2})/);
       if (match) {
         const n = parseInt(match[1], 10);
@@ -62,8 +69,8 @@ export const HourlyTemperatureChart = ({ date, data, onClose }: HourlyTemperatur
     }
     return 0;
   };
-  const normalizeTemp = (t: any) => {
-    const n = typeof t === 'number' ? t : parseFloat(t);
+  const normalizeTemp = (t: number | string | undefined) => {
+    const n = typeof t === 'number' ? t : parseFloat(String(t));
     return isNaN(n) ? 0 : n;
   };
   const displayData = hourlyData.map(d => ({
@@ -71,13 +78,19 @@ export const HourlyTemperatureChart = ({ date, data, onClose }: HourlyTemperatur
     hour: normalizeHour(d.hour),
     temperature: normalizeTemp(d.temperature),
     temp_max: normalizeTemp(d.temp_max),
-    temp_min: normalizeTemp(d.temp_min)
+    temp_min: normalizeTemp(d.temp_min),
+    precipitacao_total: normalizeTemp(d.precipitacao_total)
   }));
   const maxTemp = Math.max(...displayData.map(d => d.temp_max ?? 0));
   const minTemp = Math.min(...displayData.map(d => d.temp_min ?? 0));
   const avgTemp = displayData.reduce((sum, d) => sum + (d.temp_max ?? 0), 0) / (displayData.length || 1);
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  interface TooltipProps {
+    active?: boolean;
+    payload?: Array<{ payload: HourlyTempData }>;
+    label?: string;
+  }
+  const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       // Garante que temperature é número antes de chamar toFixed
@@ -121,7 +134,7 @@ export const HourlyTemperatureChart = ({ date, data, onClose }: HourlyTemperatur
         <div className="flex justify-between items-start mb-6">
           <div>
             <h2 className="text-xl font-bold text-[hsl(var(--card-foreground))] mb-2">
-              ⏰ Temperatura por Hora
+              ⏰ Temperatura e Precipitação por Hora
             </h2>
             <p className="text-sm text-[hsl(var(--muted-foreground))]">
               {new Date(date).toLocaleDateString('pt-BR', { 
@@ -171,21 +184,32 @@ export const HourlyTemperatureChart = ({ date, data, onClose }: HourlyTemperatur
                 tickFormatter={(value) => `${value}h`}
               />
               <YAxis
+                yAxisId="left"
                 stroke="hsl(var(--muted-foreground))"
                 tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
                 tickFormatter={(value) => `${value}°C`}
                 domain={[minTemp - 2, maxTemp + 2]}
               />
+              <YAxis
+                yAxisId="right"
+                orientation="right"
+                stroke="#3b82f6"
+                tick={{ fill: "#3b82f6", fontSize: 11 }}
+                tickFormatter={(value) => `${value}mm`}
+                width={60}
+              />
               <Tooltip content={<CustomTooltip />} />
               <ReferenceLine 
                 y={avgTemp} 
+                yAxisId="left"
                 stroke="#f59e0b" 
                 strokeDasharray="5 5" 
                 strokeWidth={1}
                 label={{ value: "Média do Dia", position: "top", fontSize: 10 }}
               />
-              {/* Linha de temperatura máxima (vermelha) */}
+              {/* Temperatura máxima (vermelha) */}
               <Line
+                yAxisId="left"
                 type="monotone"
                 dataKey="temp_max"
                 name="Temperatura Máxima do Horário"
@@ -206,8 +230,9 @@ export const HourlyTemperatureChart = ({ date, data, onClose }: HourlyTemperatur
                 }}
                 connectNulls={false}
               />
-              {/* Linha de temperatura mínima (azul) */}
+              {/* Temperatura mínima (azul) */}
               <Line
+                yAxisId="left"
                 type="monotone"
                 dataKey="temp_min"
                 name="Temperatura Mínima do Horário"
@@ -216,36 +241,7 @@ export const HourlyTemperatureChart = ({ date, data, onClose }: HourlyTemperatur
                 dot={false}
                 connectNulls={false}
               />
-              {/* Linha de temperatura mínima */}
-              <Line
-                type="monotone"
-                dataKey="temp_min"
-                name="Temperatura Mínima"
-                stroke="#3b82f6"
-                strokeWidth={2}
-                dot={false}
-                connectNulls={false}
-              />
-              {/* Linha de temperatura máxima */}
-              <Line
-                type="monotone"
-                dataKey="temp_max"
-                name="Temperatura Máxima"
-                stroke="#f59e0b"
-                strokeWidth={2}
-                dot={false}
-                connectNulls={false}
-              />
-              {/* Linha de temperatura mínima */}
-              <Line
-                type="monotone"
-                dataKey="temp_min"
-                name="Temperatura Mínima"
-                stroke="#3b82f6"
-                strokeWidth={2}
-                dot={false}
-                connectNulls={false}
-              />
+              {/* Linha de temperatura mínima (azul) e demais linhas de temperatura já estão acima */}
             </LineChart>
           </ResponsiveContainer>
         )}

@@ -55,7 +55,19 @@ export const HourlyPrecipitationChart = ({ date, data, onClose }: HourlyPrecipit
         const response = await fetch(`${import.meta.env.VITE_API_URL}/hourly-precipitation/${formattedDate}`);
         const result = await response.json();
         if (result.success && result.data) {
-          setHourlyData(result.data);
+          setHourlyData(result.data.map((d: {
+            hour: string;
+            precipitacao_total?: number;
+            Chuva_aberta?: number;
+            precipitation?: number;
+            temperature?: number;
+            temp_media?: number;
+            temp_max?: number;
+          }) => ({
+            hour: d.hour,
+            precipitation: d.precipitacao_total ?? d.Chuva_aberta ?? d.precipitation ?? 0,
+            temperature: d.temperature ?? d.temp_media ?? d.temp_max ?? undefined
+          })));
         } else {
           setHourlyData(generateMockHourlyData());
         }
@@ -68,9 +80,19 @@ export const HourlyPrecipitationChart = ({ date, data, onClose }: HourlyPrecipit
     fetchHourlyData();
   }, [date]);
 
-  const displayData = data.length > 0 ? data : hourlyData;
+  // Sempre normaliza precipitation para número
+  const normalizePrecip = (v: number | string | undefined) => typeof v === 'number' ? v : parseFloat(String(v)) || 0;
+  const displayData = (data.length > 0 ? data : hourlyData).map(d => ({
+    ...d,
+    precipitation: normalizePrecip(d.precipitation)
+  }));
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  interface TooltipProps {
+    active?: boolean;
+    payload?: Array<{ payload: HourlyData }>;
+    label?: string;
+  }
+  const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
     if (active && payload && payload.length) {
       const d = payload[0].payload;
       const rainIntensity = getRainIntensity(d.precipitation);

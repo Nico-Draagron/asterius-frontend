@@ -152,13 +152,12 @@ const ChatVisualization: React.FC<ChatVisualizationProps> = ({ data }) => {
           </div>
         );
 
-      case 'pie':
+      case 'pie': {
         const pieData = chartData.map((item, index) => ({
           name: item.name,
           value: item.value,
           fill: COLORS[index % COLORS.length]
         }));
-        
         return (
           <div className="w-full">
             <h3 className="text-lg font-semibold mb-4 text-center">{title}</h3>
@@ -183,6 +182,7 @@ const ChatVisualization: React.FC<ChatVisualizationProps> = ({ data }) => {
             </ResponsiveContainer>
           </div>
         );
+      }
 
       case 'scatter':
         return (
@@ -204,7 +204,7 @@ const ChatVisualization: React.FC<ChatVisualizationProps> = ({ data }) => {
           </div>
         );
 
-      case 'boxplot':
+      case 'boxplot': {
         // Para boxplot, vamos usar um gráfico de barras com informações estatísticas
         const stats = calculateBoxplotStats(data.values);
         const boxplotData = [
@@ -234,6 +234,7 @@ const ChatVisualization: React.FC<ChatVisualizationProps> = ({ data }) => {
             </ResponsiveContainer>
           </div>
         );
+      }
 
       default:
         return (

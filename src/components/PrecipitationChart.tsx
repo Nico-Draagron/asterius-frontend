@@ -12,7 +12,14 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
   const [hoveredPoint, setHoveredPoint] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [showHourlyChart, setShowHourlyChart] = useState(false);
-  const [hourlyData, setHourlyData] = useState<any[]>([]);
+  interface HourlyPrecipitationData {
+    hour: string;
+    precipitacao_total: number;
+    precipitation?: number;
+    temperature?: number;
+    [key: string]: unknown;
+  }
+  const [hourlyData, setHourlyData] = useState<HourlyPrecipitationData[]>([]);
   const [isLoadingHourly, setIsLoadingHourly] = useState(false);
 
   // Validação dos dados
@@ -53,7 +60,7 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
   };
   
   // Função para lidar com cliques no gráfico
-  const handleBarClick = async (data: any) => {
+  const handleBarClick = async (data: { fullDate?: string }) => {
     if (data && data.fullDate) {
       setSelectedDate(data.fullDate);
       setIsLoadingHourly(true);
@@ -74,7 +81,12 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
     }
   };
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  interface CustomTooltipProps {
+    active?: boolean;
+    payload?: Array<{ payload: typeof processedData[number] }>;
+    label?: string;
+  }
+  const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       const rainInfo = getRainType(data.rainDaily);
@@ -163,13 +175,13 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
             <ComposedChart 
               data={processedData} 
               margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-              onMouseMove={(e: any) => {
+              onMouseMove={(e: { activeTooltipIndex?: number }) => {
                 if (e.activeTooltipIndex !== undefined) {
                   setHoveredPoint(e.activeTooltipIndex);
                 }
               }}
               onMouseLeave={() => setHoveredPoint(null)}
-              onClick={(e: any) => {
+              onClick={(e: { activePayload?: Array<{ payload: { fullDate?: string } }> }) => {
                 if (e && e.activePayload && e.activePayload[0]) {
                   handleBarClick(e.activePayload[0].payload);
                 }
@@ -217,7 +229,11 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
       {showHourlyChart && selectedDate && (
         <HourlyPrecipitationChart
           date={selectedDate}
-          data={hourlyData}
+          data={hourlyData.map((d) => ({
+            hour: d.hour,
+            precipitation: typeof d.precipitacao_total === 'number' ? d.precipitacao_total : (typeof d.precipitation === 'number' ? d.precipitation : 0),
+            temperature: typeof d.temperature === 'number' ? d.temperature : undefined
+          }))}
           onClose={() => {
             setShowHourlyChart(false);
             setHourlyData([]);

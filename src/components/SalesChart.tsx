@@ -43,7 +43,12 @@ export const SalesChart = ({ data }: SalesChartProps) => {
     return { type: "MÉDIA", icon: "📊", color: "#3b82f6" };
   };
   
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  interface CustomTooltipProps {
+    active?: boolean;
+    payload?: Array<{ payload: typeof processedData[number] }>;
+    label?: string;
+  }
+  const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       const salesPerformance = getSalesPerformance(
@@ -128,7 +133,7 @@ export const SalesChart = ({ data }: SalesChartProps) => {
           <ComposedChart 
             data={processedData} 
             margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-            onMouseMove={(e: any) => {
+            onMouseMove={(e: { activeTooltipIndex?: number }) => {
               if (e.activeTooltipIndex !== undefined) {
                 setHoveredPoint(e.activeTooltipIndex);
               }

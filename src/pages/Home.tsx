@@ -243,9 +243,28 @@ const Home = () => {
   };
 
   // Prepare chart data with validation, sorting and day names
-  let salesData: any[] = [];
-  let tempData: any[] = [];
-  let rainData: any[] = [];
+  interface SalesChartData {
+    day: string;
+    fullDate?: string;
+    sales: number;
+    rain: number;
+    temperature?: number;
+  }
+  interface TempChartData {
+    day: string;
+    fullDate?: string;
+    value: number;
+    radiation?: number;
+    precipitation?: number;
+  }
+  interface RainChartData {
+    day: string;
+    fullDate?: string;
+    value: number;
+  }
+  let salesData: SalesChartData[] = [];
+  let tempData: TempChartData[] = [];
+  let rainData: RainChartData[] = [];
   
   if (apiData?.predictions && Array.isArray(apiData.predictions)) {
     const { sortedPredictions, sortedWeather } = ensureChronologicalOrder(
