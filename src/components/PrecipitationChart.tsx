@@ -229,11 +229,23 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
       {showHourlyChart && selectedDate && (
         <HourlyPrecipitationChart
           date={selectedDate}
-          data={hourlyData.map((d) => ({
-            hour: d.hour,
-            precipitation: typeof d.precipitacao_total === 'number' ? d.precipitacao_total : (typeof d.precipitation === 'number' ? d.precipitation : 0),
-            temperature: typeof d.temperature === 'number' ? d.temperature : undefined
-          }))}
+          data={Array.from({ length: 24 }, (_, i) => {
+            const hourStr = `${i.toString().padStart(2, '0')}:00`;
+            // Normaliza todos os hours do backend para HH:00
+            const found = hourlyData.find(d => {
+              if (!d.hour) return false;
+              // Aceita "7:00", "07:00", "7", "07"
+              const h = d.hour.split(":")[0].padStart(2, '0');
+              return `${h}:00` === hourStr;
+            });
+            return {
+              hour: hourStr,
+              precipitation: found && typeof found.precipitacao_total === 'number'
+                ? found.precipitacao_total
+                : (found && typeof found.precipitation === 'number' ? found.precipitation : 0),
+              temperature: found && typeof found.temperature === 'number' ? found.temperature : undefined
+            };
+          })}
           onClose={() => {
             setShowHourlyChart(false);
             setHourlyData([]);
