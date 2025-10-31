@@ -24,9 +24,11 @@ export const TemperatureChart = ({ data }: TemperatureChartProps) => {
   // Calcular estatísticas de temperatura
   const temperatures = chartData.map(d => d.value);
   const avgTemp = temperatures.length > 0 ? temperatures.reduce((a, b) => a + b, 0) / temperatures.length : 0;
-  const maxTemp = temperatures.length > 0 ? Math.max(...temperatures) : 0;
-  const minTemp = temperatures.length > 0 ? Math.min(...temperatures) : 0;
-  const tempVariation = maxTemp - minTemp;
+  
+  // Usar a temperatura de HOJE (primeiro ponto do gráfico) para o destaque
+  const todayTemp = chartData.length > 0 ? chartData[0].value : 0;
+  const todayRadiation = chartData.length > 0 ? chartData[0].radiation : undefined;
+  const todayPrecipitation = chartData.length > 0 ? chartData[0].precipitation : undefined;
   
   // Classificar tipo de clima baseado na temperatura, radiação e precipitação
   const getWeatherType = (temp: number, radiation?: number, precipitation?: number) => {
@@ -61,7 +63,8 @@ export const TemperatureChart = ({ data }: TemperatureChartProps) => {
   const avgPrecipitation = chartData.length > 0 ? 
     chartData.reduce((sum, d) => sum + (d.precipitation || 0), 0) / chartData.length : undefined;
     
-  const weatherInfo = getWeatherType(avgTemp, avgRadiation, avgPrecipitation);
+  // Usar os dados de HOJE para o destaque no canto direito
+  const weatherInfo = getWeatherType(todayTemp, todayRadiation, todayPrecipitation);
   
   interface CustomTooltipProps {
     active?: boolean;
@@ -151,7 +154,7 @@ export const TemperatureChart = ({ data }: TemperatureChartProps) => {
             <div className="flex flex-col items-end">
               <span className="text-4xl mb-1" style={{ color: weatherInfo.color }}>{weatherInfo.icon}</span>
               <div className="text-3xl font-bold mb-1" style={{ color: weatherInfo.color }}>
-                {(maxTemp || 0).toFixed(1)}°C
+                {(todayTemp || 0).toFixed(1)}°C
               </div>
               <div className="text-sm text-[hsl(var(--muted-foreground))]">
                 {weatherInfo.type}

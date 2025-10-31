@@ -239,24 +239,16 @@ const Home = () => {
     ? (apiData.predictions[todayIndex].value ?? 0) 
     : 0;
   
-  // Buscar a maior temperatura máxima e menor temperatura mínima do PERÍODO (todos os dias exibidos)
-  let periodTempMax = 22;
-  let periodTempMin = 22;
-  if (apiData?.weather_data && apiData.weather_data.length > 0) {
-    // Pega todas as temp_max do período
-    const allMaxTemps = apiData.weather_data
-      .map(w => w.temp_max)
-      .filter((temp): temp is number => temp !== null && temp !== undefined && !isNaN(temp));
-    if (allMaxTemps.length > 0) {
-      periodTempMax = Math.round(Math.max(...allMaxTemps));
+  // Buscar a máxima e mínima do dia de HOJE apenas
+  let todayTempMax = 22;
+  let todayTempMin = 22;
+  if (apiData?.weather_data && apiData.weather_data.length > todayIndex) {
+    const todayWeather = apiData.weather_data[todayIndex];
+    if (todayWeather?.temp_max !== null && todayWeather?.temp_max !== undefined && !isNaN(todayWeather.temp_max)) {
+      todayTempMax = Math.round(todayWeather.temp_max);
     }
-    
-    // Pega todas as temp_min do período
-    const allMinTemps = apiData.weather_data
-      .map(w => w.temp_min)
-      .filter((temp): temp is number => temp !== null && temp !== undefined && !isNaN(temp));
-    if (allMinTemps.length > 0) {
-      periodTempMin = Math.round(Math.min(...allMinTemps));
+    if (todayWeather?.temp_min !== null && todayWeather?.temp_min !== undefined && !isNaN(todayWeather.temp_min)) {
+      todayTempMin = Math.round(todayWeather.temp_min);
     }
   }
   
@@ -488,14 +480,14 @@ const Home = () => {
             trend={classificacaoVendas}
             salesValue={todaysSales}
             dayOfWeek={dayOfWeek}
-            temperature={periodTempMax}
+            temperature={todayTempMax}
             precipitation={todaysRain}
             radiation={todaysRadiation}
           />
           <KPICard 
-            title="Temperatura do Período" 
-            value={`${periodTempMax}°C`}
-            subtitle={`Mínima: ${periodTempMin}°C`}
+            title="Temperatura Maxima prevista para Hoje" 
+            value={`${todayTempMax}°C`}
+            subtitle={`Mínima: ${todayTempMin}°C`}            gcloud auth configure-docker
             icon={Thermometer} 
           />
           <KPICard 
