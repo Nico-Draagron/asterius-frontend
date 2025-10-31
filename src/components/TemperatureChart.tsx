@@ -122,7 +122,14 @@ export const TemperatureChart = ({ data }: TemperatureChartProps) => {
       setIsLoadingHourly(true);
       setShowHourlyChart(true);
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/hourly-weather/${dateStr}/1`); // lojaId fixo, pode ser prop
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+        
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/hourly-weather/${dateStr}/1`, {
+          signal: controller.signal
+        }); // lojaId fixo, pode ser prop
+        clearTimeout(timeoutId);
+        
         const result = await response.json();
         if (result.success && result.data) {
           setHourlyData(result.data.map((d: { hour: string; temp_max?: number; temp_min?: number }) => ({ hour: d.hour, temp_max: d.temp_max, temp_min: d.temp_min })));

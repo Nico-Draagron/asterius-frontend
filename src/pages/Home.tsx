@@ -64,16 +64,6 @@ function getCycleDates() {
   return dates;
 }
 
-// Fallback mock data generator (usado apenas em caso de erro na API)
-const generateFallbackData = (dates: Date[]) => {
-  return dates.map(date => ({
-    day: date.toISOString().split('T')[0],
-    sales: Math.floor(Math.random() * 3000) + 3000,
-    rain: Math.floor(Math.random() * 60) + 10,
-    temperature: Math.floor(Math.random() * 10) + 20,
-  }));
-};
-
 const Home = () => {
   const [lojaId, setLojaId] = useState(1);
   const [apiData, setApiData] = useState<APIResponse | null>(null);
@@ -138,7 +128,15 @@ const Home = () => {
     setSendingRequest(true);
     setError(null);
     try {
-      const response = await fetch(`${API_BASE_URL}/predictions-with-weather/${days}/${loja}`);
+      // Adicionar timeout de 15 segundos para mobile
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      
+      const response = await fetch(`${API_BASE_URL}/predictions-with-weather/${days}/${loja}`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      
       if (!response.ok) {
         throw new Error(`API Error: ${response.status}`);
       }
@@ -165,45 +163,16 @@ const Home = () => {
       setApiData(data);
       console.log("✅ Dados reais carregados com temp_max calculada dos dados horários:", data);
     } catch (err) {
-      console.error("❌ Erro ao carregar dados:", err);
-      setError(err instanceof Error ? err.message : "Erro desconhecido");
-      // Use fallback data
-      const fallbackData = generateFallbackData(cycleDates);
-      setApiData({
-        success: false,
-        days: cycleDates.length,
-        loja_id: loja,
-        model_status: "fallback",
-        predictions: fallbackData.map(item => ({
-          date: item.day,
-          value: item.sales,
-          confidence: 0.5
-        })),
-        weather_data: fallbackData.map(item => ({
-          date: item.day,
-          temperature: item.temperature,
-          temp_max: item.temperature + 5,
-          humidity: 65,
-          precipitation: item.rain
-        })),
-        charts: {
-          sales: {
-            labels: fallbackData.map(item => item.day),
-            data: fallbackData.map(item => item.sales)
-          },
-          temperature: {
-            labels: fallbackData.map(item => item.day),
-            data: fallbackData.map(item => item.temperature)
-          },
-          precipitation: {
-            labels: fallbackData.map(item => item.day),
-            data: fallbackData.map(item => item.rain)
-          }
-        }
-      });
+      console.error("❌ Erro ao carregar dados da API:", err);
+      const errorMessage = err instanceof Error 
+        ? (err.name === 'AbortError' ? 'Timeout na conexão - tente novamente' : err.message)
+        : "Erro desconhecido ao conectar com backend";
+      setError(errorMessage);
+      // NÃO usa fallback - deixa apiData null para mostrar erro real
     } finally {
       setLoading(false);
       setSendingRequest(false);
+      console.log("🔄 Loading finalizado");
     }
   };
 
@@ -388,10 +357,11 @@ const Home = () => {
   }
 
   // Estado para controlar quando mostrar a tela de loading
-  const isDataReady = !loading && apiData !== null && salesData.length > 0;
+  const isDataReady = !loading && apiData !== null;
 
   // Se os dados não estão prontos, mostrar tela de loading
   if (!isDataReady) {
+    console.log("⏳ Aguardando dados - loading:", loading, "apiData:", apiData);
     return <LoadingScreen />;
   }
 
@@ -442,8 +412,20 @@ const Home = () => {
         )}
         
         {error && (
-          <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-2 rounded-lg mb-6">
-            ⚠️ Usando dados simulados - {error}
+          <div className="bg-red-50 border-2 border-red-300 text-red-900 px-6 py-4 rounded-lg mb-6">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">❌</span>
+              <div className="flex-1">
+                <p className="font-bold text-lg mb-1">Erro ao carregar dados</p>
+                <p className="text-sm mb-2">{error}</p>
+                <button
+                  onClick={() => fetchPredictionsWithWeather(cycleDates.length, lojaId)}
+                  className="mt-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
+                >
+                  🔄 Tentar Novamente
+                </button>
+              </div>
+            </div>
           </div>
         )}
         
@@ -487,7 +469,7 @@ const Home = () => {
           <KPICard 
             title="Temperatura Maxima prevista para Hoje" 
             value={`${todayTempMax}°C`}
-            subtitle={`Mínima: ${todayTempMin}°C`}            gcloud auth configure-docker
+            subtitle={`Mínima: ${todayTempMin}°C`}
             icon={Thermometer} 
           />
           <KPICard 

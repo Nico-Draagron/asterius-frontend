@@ -32,31 +32,54 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
           return dayDate >= today;
         });
         
-        // Buscar dados horários para cada dia disponível (hoje + futuro)
-        const allHourlyData: Array<Record<string, unknown>> = [];
+        console.log(`📊 Buscando dados horários para ${futureData.length} dias em paralelo...`);
         
-        for (const dayData of futureData) {
-          if (dayData.fullDate) {
-            try {
-              const response = await fetch(`${import.meta.env.VITE_API_URL}/hourly-precipitation/${dayData.fullDate}`);
-              const result = await response.json();
-              if (result.success && Array.isArray(result.data)) {
-                // Adiciona fullDate em cada item para facilitar agrupamento
-                const dataWithDate = result.data.map((item: Record<string, unknown>) => ({
-                  ...item,
-                  fullDate: dayData.fullDate
-                }));
-                allHourlyData.push(...dataWithDate);
-              }
-            } catch (err) {
-              console.warn(`Erro ao buscar dados de ${dayData.fullDate}:`, err);
+        // OTIMIZAÇÃO: Buscar dados horários em PARALELO com Promise.all
+        const fetchPromises = futureData.map(async (dayData) => {
+          if (!dayData.fullDate) return [];
+          
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout por requisição
+            
+            const response = await fetch(
+              `${import.meta.env.VITE_API_URL}/hourly-precipitation/${dayData.fullDate}`,
+              { signal: controller.signal }
+            );
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+              console.warn(`⚠️ Status ${response.status} para ${dayData.fullDate}`);
+              return [];
             }
+            
+            const result = await response.json();
+            if (result.success && Array.isArray(result.data)) {
+              console.log(`✅ ${dayData.fullDate}: ${result.data.length} horas carregadas`);
+              // Adiciona fullDate em cada item para facilitar agrupamento
+              return result.data.map((item: Record<string, unknown>) => ({
+                ...item,
+                fullDate: dayData.fullDate
+              }));
+            }
+            return [];
+          } catch (err) {
+            const errorMsg = err instanceof Error && err.name === 'AbortError' 
+              ? 'Timeout' 
+              : 'Erro de rede';
+            console.warn(`⚠️ ${errorMsg} ao buscar ${dayData.fullDate}`);
+            return [];
           }
-        }
+        });
         
+        // Espera TODAS as requisições terminarem (paralelo)
+        const results = await Promise.all(fetchPromises);
+        const allHourlyData = results.flat();
+        
+        console.log(`✅ Total de ${allHourlyData.length} registros horários carregados`);
         setHourlyDataAll(allHourlyData);
       } catch (err) {
-        console.error('Erro ao buscar dados horários:', err);
+        console.error('❌ Erro ao buscar dados horários:', err);
         setHourlyDataAll([]);
       } finally {
         setIsLoading(false);
@@ -189,6 +212,13 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
           <p className="text-sm text-[hsl(var(--muted-foreground))]">
             Clique em um dia para ver precipitação por hora
           </p>
+          {/* Indicador de loading */}
+          {isLoading && (
+            <div className="mt-2 flex items-center gap-2 text-xs text-blue-600">
+              <div className="animate-spin h-3 w-3 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+              Carregando dados horários...
+            </div>
+          )}
         </div>
         
         {/* Informações da precipitação */}
