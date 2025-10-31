@@ -1,7 +1,7 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine, LineChart, Line, ComposedChart } from "recharts";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { HourlyPrecipitationChart } from "./HourlyPrecipitationChart";
-
+import { sumHourlyPrecipitationByDay } from "../lib/sumHourlyPrecipitationByDay";
 
 interface PrecipitationChartProps {
   data: { day: string; fullDate?: string; value: number }[];
@@ -12,36 +12,73 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
   const [hoveredPoint, setHoveredPoint] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [showHourlyChart, setShowHourlyChart] = useState(false);
-  interface HourlyPrecipitationData {
-    hour: string;
-    precipitacao_total: number;
-    precipitation?: number;
-    temperature?: number;
-    [key: string]: unknown;
-  }
-  const [hourlyData, setHourlyData] = useState<HourlyPrecipitationData[]>([]);
-  const [isLoadingHourly, setIsLoadingHourly] = useState(false);
+  const [hourlyDataAll, setHourlyDataAll] = useState<Array<Record<string, unknown>>>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hourlyData, setHourlyData] = useState<Array<Record<string, unknown>>>([]);
 
-  // Validação dos dados
-  const chartData = Array.isArray(data) ? data : [];
+  // Buscar todos os dados horários ao montar
+  useEffect(() => {
+    async function fetchAllHourly() {
+      setIsLoading(true);
+      try {
+        // Buscar dados horários para cada dia disponível no prop data
+        const allHourlyData: Array<Record<string, unknown>> = [];
+        
+        for (const dayData of data) {
+          if (dayData.fullDate) {
+            try {
+              const response = await fetch(`${import.meta.env.VITE_API_URL}/hourly-precipitation/${dayData.fullDate}`);
+              const result = await response.json();
+              if (result.success && Array.isArray(result.data)) {
+                // Adiciona fullDate em cada item para facilitar agrupamento
+                const dataWithDate = result.data.map((item: Record<string, unknown>) => ({
+                  ...item,
+                  fullDate: dayData.fullDate
+                }));
+                allHourlyData.push(...dataWithDate);
+              }
+            } catch (err) {
+              console.warn(`Erro ao buscar dados de ${dayData.fullDate}:`, err);
+            }
+          }
+        }
+        
+        setHourlyDataAll(allHourlyData);
+      } catch (err) {
+        console.error('Erro ao buscar dados horários:', err);
+        setHourlyDataAll([]);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    if (data.length > 0) {
+      fetchAllHourly();
+    } else {
+      setIsLoading(false);
+    }
+  }, [data]);
+
+  // Somar chuva horária por dia
+  const dailySums = sumHourlyPrecipitationByDay(hourlyDataAll);
   
-  // Calcular precipitação acumulada e estatísticas
-  let accumulated = 0;
-  const processedData = chartData.map((item, index) => {
-    accumulated += item.value;
+  // Se não houver dados horários, usar dados do prop (pode ser vazio, mas exibe o gráfico)
+  const dataToUse = dailySums.length > 0 ? dailySums : data.map(d => ({ fullDate: d.fullDate || '', value: d.value || 0 }));
+  
+  // Calcular precipitação acumulada e estatísticas a partir dos somatórios diários
+  const processedData = dataToUse.map((item, index) => {
     return {
       ...item,
-      rainDaily: item.value,
-      rainAccumulated: accumulated,
+      rainDaily: Number(item.value) || 0,
+      day: item.fullDate ? new Date(item.fullDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '',
       dayIndex: index
     };
   });
   
-  const precipitations = chartData.map(d => d.value);
-  const totalRain = accumulated;
-  const avgRain = precipitations.length > 0 ? totalRain / precipitations.length : 0;
-  const maxRain = precipitations.length > 0 ? Math.max(...precipitations) : 0;
-  const rainyDays = precipitations.filter(p => p > 0.1).length; // Dias com chuva significativa
+  const precipitations: number[] = processedData.map(d => Number(d.rainDaily) || 0);
+  const totalRain: number = precipitations.reduce((a, b) => a + b, 0);
+  const maxRain: number = precipitations.length > 0 ? Math.max(...precipitations) : 0;
+  const todayRain: number = processedData.length > 0 ? (Number(processedData[0].rainDaily) || 0) : 0;
   
   // Classificar tipo de precipitação
   const getRainType = (rain: number) => {
@@ -59,36 +96,13 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
     return "⛈️";
   };
   
-  // Função para lidar com cliques no gráfico
-  // Corrigido: buscar do endpoint correto de precipitação horária
-  const handleBarClick = async (data: { fullDate?: string }) => {
-    if (data && data.fullDate) {
-      setSelectedDate(data.fullDate);
-      setIsLoadingHourly(true);
+  // Função para lidar com cliques no gráfico - agora apenas filtra dados já carregados
+  const handleBarClick = (clickData: { fullDate?: string }) => {
+    if (clickData && clickData.fullDate) {
+      setSelectedDate(clickData.fullDate);
       setShowHourlyChart(true);
-      try {
-        // Busca do endpoint correto
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/hourly-precipitation/${data.fullDate}`);
-        const result = await response.json();
-        if (result.success && result.data) {
-          // Normaliza para o formato esperado pelo HourlyPrecipitationChart
-          setHourlyData(result.data.map((d: HourlyPrecipitationData) => ({
-            hour: d.hour,
-            precipitation: (typeof d.precipitacao_total === 'number' ? d.precipitacao_total :
-              typeof d.Chuva_aberta === 'number' ? d.Chuva_aberta :
-              typeof d.precipitation === 'number' ? d.precipitation : 0),
-            temperature: (typeof d.temperature === 'number' ? d.temperature :
-              typeof d.temp_media === 'number' ? d.temp_media :
-              typeof d.temp_max === 'number' ? d.temp_max : undefined)
-          })));
-        } else {
-          setHourlyData([]);
-        }
-      } catch (err) {
-        setHourlyData([]);
-      } finally {
-        setIsLoadingHourly(false);
-      }
+      // Filtra dados horários do dia selecionado
+      setHourlyData(hourlyDataAll.filter(d => d.fullDate === clickData.fullDate));
     }
   };
 
@@ -100,7 +114,7 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
   const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
-      const rainValue = data.rainDaily || 0;
+      const rainValue: number = Number(data.rainDaily) || 0;
       const rainInfo = getRainType(rainValue);
       return (
         <div className="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-lg p-4 shadow-xl">
@@ -130,8 +144,8 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
               </div>
             </div>
             <div className="text-xs text-[hsl(var(--muted-foreground))] space-y-1">
-              <p>⛈️ Pico máximo: {(maxRain || 0).toFixed(1)}mm</p>
-              <p>💦 Total previsto: {(totalRain || 0).toFixed(1)}mm</p>
+              <p>⛈️ Pico máximo: {maxRain.toFixed(1)}mm</p>
+              <p>💦 Total previsto: {totalRain.toFixed(1)}mm</p>
               <div className="mt-2 pt-1 border-t border-[hsl(var(--border))]">
                 <p className="text-blue-600 font-semibold">👆 Clique para ver detalhes por hora</p>
               </div>
@@ -156,22 +170,36 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
         </div>
         
         {/* Informações da precipitação */}
-        <div className="text-right space-y-1">
+        <div className="text-right space-y-3">
+          {/* Previsão para hoje */}
           <div className="flex items-center gap-2 justify-end">
-            <span className="text-2xl">{getWeatherIcon(totalRain)}</span>
+            <span className="text-2xl">{getWeatherIcon(todayRain)}</span>
             <div>
               <div className="text-lg font-bold text-blue-600">
-                {(totalRain || 0).toFixed(1)}mm
+                {todayRain.toFixed(1)}mm
               </div>
               <div className="text-xs text-[hsl(var(--muted-foreground))]">
-                Total Previsto
+                Hoje
+              </div>
+            </div>
+          </div>
+          
+          {/* Total previsto acumulado */}
+          <div className="flex items-center gap-2 justify-end pt-2 border-t border-[hsl(var(--border))]">
+            <span className="text-xl">💧</span>
+            <div>
+              <div className="text-base font-semibold text-[hsl(var(--card-foreground))]">
+                {totalRain.toFixed(1)}mm
+              </div>
+              <div className="text-xs text-[hsl(var(--muted-foreground))]">
+                Total Acumulado
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {chartData.length === 0 ? (
+      {isLoading ? (
         <div className="h-[400px] flex items-center justify-center text-muted-foreground">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
@@ -214,7 +242,7 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
               <YAxis
                 stroke="hsl(var(--muted-foreground))"
                 tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
-                tickFormatter={(value) => `${value}mm`}
+                tickFormatter={(value) => `${Number(value).toFixed(1)}mm`}
                 domain={[0, 'dataMax + 5']}
               />
               <Tooltip content={<CustomTooltip />} />
@@ -238,9 +266,11 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
         <HourlyPrecipitationChart
           date={selectedDate}
           data={hourlyData.map((d) => ({
-            hour: d.hour,
-            precipitation: typeof d.precipitation === 'number' ? d.precipitation : 0,
-            temperature: d.temperature
+            hour: String(d.hour || ''),
+            precipitation: typeof d.precipitation === 'number' ? d.precipitation : 
+                          typeof d.precipitacao_total === 'number' ? d.precipitacao_total :
+                          typeof d.Chuva_aberta === 'number' ? d.Chuva_aberta : 0,
+            temperature: typeof d.temperature === 'number' ? d.temperature : undefined
           }))}
           onClose={() => {
             setShowHourlyChart(false);
