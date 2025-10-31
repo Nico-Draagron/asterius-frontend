@@ -212,6 +212,9 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
           <p className="text-sm text-[hsl(var(--muted-foreground))]">
             Clique em um dia para ver precipitação por hora
           </p>
+          <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1 italic">
+            ℹ️ Dados do modelo GFS/NOMADS (atualização a cada 6h - valores distribuídos uniformemente)
+          </p>
           {/* Indicador de loading */}
           {isLoading && (
             <div className="mt-2 flex items-center gap-2 text-xs text-blue-600">

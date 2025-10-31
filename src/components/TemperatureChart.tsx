@@ -45,14 +45,14 @@ export const TemperatureChart = ({ data }: TemperatureChartProps) => {
     // Radiação alta com temperatura
     if (radiation !== undefined && radiation >= 300) {
       if (temp < 15) return { type: "Frio e Ensolarado", icon: "🌤️", color: "#3b82f6" };
-      if (temp < 25) return { type: "Ameno e Ensolarado", icon: "☀️", color: "#10b981" };
+      if (temp < 25) return { type: "Ameno e Ensolarado", icon: "☀️", color: "#ef4444" }; // Vermelho
       if (temp < 30) return { type: "Quente e Ensolarado", icon: "☀️", color: "#f59e0b" };
       return { type: "Muito Quente", icon: "🔥", color: "#ef4444" };
     }
     
     // Fallback para apenas temperatura (quando não há dados de radiação)
     if (temp < 15) return { type: "Frio", icon: "🥶", color: "#3b82f6" };
-    if (temp < 25) return { type: "Ameno", icon: "🌤️", color: "#10b981" };
+    if (temp < 25) return { type: "Ameno", icon: "🌤️", color: "#ef4444" }; // Vermelho
     if (temp < 30) return { type: "Quente", icon: "☀️", color: "#f59e0b" };
     return { type: "Muito Quente", icon: "🔥", color: "#ef4444" };
   };

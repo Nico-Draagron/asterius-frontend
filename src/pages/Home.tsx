@@ -208,16 +208,16 @@ const Home = () => {
     ? (apiData.predictions[todayIndex].value ?? 0) 
     : 0;
   
-  // Buscar a máxima e mínima do dia de HOJE apenas
+  // Buscar a máxima e mínima do dia de HOJE apenas (valores exatos, não arredondados)
   let todayTempMax = 22;
   let todayTempMin = 22;
   if (apiData?.weather_data && apiData.weather_data.length > todayIndex) {
     const todayWeather = apiData.weather_data[todayIndex];
     if (todayWeather?.temp_max !== null && todayWeather?.temp_max !== undefined && !isNaN(todayWeather.temp_max)) {
-      todayTempMax = Math.round(todayWeather.temp_max);
+      todayTempMax = Number(todayWeather.temp_max.toFixed(1)); // Mantém 1 casa decimal
     }
     if (todayWeather?.temp_min !== null && todayWeather?.temp_min !== undefined && !isNaN(todayWeather.temp_min)) {
-      todayTempMin = Math.round(todayWeather.temp_min);
+      todayTempMin = Number(todayWeather.temp_min.toFixed(1)); // Mantém 1 casa decimal
     }
   }
   
