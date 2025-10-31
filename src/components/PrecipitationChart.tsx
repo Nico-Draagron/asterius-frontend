@@ -21,10 +21,21 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
     async function fetchAllHourly() {
       setIsLoading(true);
       try {
-        // Buscar dados horários para cada dia disponível no prop data
+        // Filtrar apenas hoje e dias futuros
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const futureData = data.filter(dayData => {
+          if (!dayData.fullDate) return false;
+          const dayDate = new Date(dayData.fullDate);
+          dayDate.setHours(0, 0, 0, 0);
+          return dayDate >= today;
+        });
+        
+        // Buscar dados horários para cada dia disponível (hoje + futuro)
         const allHourlyData: Array<Record<string, unknown>> = [];
         
-        for (const dayData of data) {
+        for (const dayData of futureData) {
           if (dayData.fullDate) {
             try {
               const response = await fetch(`${import.meta.env.VITE_API_URL}/hourly-precipitation/${dayData.fullDate}`);
@@ -62,8 +73,19 @@ export const PrecipitationChart = ({ data, lojaId }: PrecipitationChartProps) =>
   // Somar chuva horária por dia
   const dailySums = sumHourlyPrecipitationByDay(hourlyDataAll);
   
+  // Filtrar apenas hoje e dias futuros para o fallback também
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const futureDataFallback = data.filter(d => {
+    if (!d.fullDate) return false;
+    const dayDate = new Date(d.fullDate);
+    dayDate.setHours(0, 0, 0, 0);
+    return dayDate >= today;
+  }).map(d => ({ fullDate: d.fullDate || '', value: d.value || 0 }));
+  
   // Se não houver dados horários, usar dados do prop (pode ser vazio, mas exibe o gráfico)
-  const dataToUse = dailySums.length > 0 ? dailySums : data.map(d => ({ fullDate: d.fullDate || '', value: d.value || 0 }));
+  const dataToUse = dailySums.length > 0 ? dailySums : futureDataFallback;
   
   // Calcular precipitação acumulada e estatísticas a partir dos somatórios diários
   const processedData = dataToUse.map((item, index) => {
